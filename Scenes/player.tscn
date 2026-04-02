@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://wsdxy4neg7q4"]
+
+[ext_resource type="Script" uid="uid://dqgxb5hd8d0xc" path="res://Scripts/player.gd" id="1_cvnsp"]
+[ext_resource type="Texture2D" uid="uid://owyhr8pl3j7p" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Players/Tilemap/tilemap.png" id="2_6t5aa"]
+[ext_resource type="PackedScene" uid="uid://ck811d7pd7xkj" path="res://Scenes/Gun.tscn" id="3_6t5aa"]
+[ext_resource type="Script" uid="uid://efaj4txavtxx" path="res://Scripts/camera_2d.gd" id="4_hg7od"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cvnsp"]
+atlas = ExtResource("2_6t5aa")
+region = Rect2(75, 0, 24, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6t5aa"]
+atlas = ExtResource("2_6t5aa")
+region = Rect2(0, 0, 24, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vgqql"]
+atlas = ExtResource("2_6t5aa")
+region = Rect2(0, 0, 24, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fkybt"]
+atlas = ExtResource("2_6t5aa")
+region = Rect2(25, 0, 24, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_x3wgy"]
+atlas = ExtResource("2_6t5aa")
+region = Rect2(50, 0, 24, 24)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_8erm5"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cvnsp")
+}],
+"loop": true,
+"name": &"Dead",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6t5aa")
+}],
+"loop": true,
+"name": &"Idle",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vgqql")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fkybt")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_x3wgy")
+}],
+"loop": true,
+"name": &"Walk",
+"speed": 10.0
+}]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_cvnsp"]
+radius = 1.6666565
+height = 3.3333282
+
+[node name="Player" type="CharacterBody2D" unique_id=591215505]
+position = Vector2(579.00006, 353.00003)
+scale = Vector2(5, 5)
+script = ExtResource("1_cvnsp")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=648892574]
+scale = Vector2(0.2, 0.2)
+sprite_frames = SubResource("SpriteFrames_8erm5")
+animation = &"Walk"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=286742754]
+position = Vector2(6.2584877e-07, 0.6666666)
+shape = SubResource("CapsuleShape2D_cvnsp")
+
+[node name="Gun" parent="." unique_id=802591297 instance=ExtResource("3_6t5aa")]
+position = Vector2(2.199991, 1.1999922)
+scale = Vector2(0.35138887, 0.3874998)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=581194483]
+zoom = Vector2(1.2, 1.2)
+script = ExtResource("4_hg7od")
