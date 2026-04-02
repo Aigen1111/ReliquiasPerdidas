@@ -2,6 +2,7 @@ extends CharacterBody2D
 
 @export var speed: float = 650.0
 @export var lifetime: float = 1.0
+@export var damage: float = 25.0  # Daño por bala
 
 var direction := Vector2.ZERO
 
@@ -16,6 +17,11 @@ func _physics_process(delta: float) -> void:
 
 	var collision := move_and_collide(direction * speed * delta)
 	if collision != null:
+		var collider := collision.get_collider()
+		# Si el objeto golpeado tiene take_damage, es un enemigo
+		if collider != null and collider.has_method("take_damage"):
+			collider.take_damage(damage)
+		# En cualquier caso la bala desaparece (tile o enemigo)
 		queue_free()
 
 
