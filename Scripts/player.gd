@@ -1,0 +1,72 @@
+extends CharacterBody2D
+
+@export var move_speed: float = 220.0
+@export var acceleration: float = 1400.0
+@export var friction: float = 1800.0
+@export var dash_speed: float = 500.0
+@export var dash_duration: float = 0.10
+@export var dash_cooldown: float = 0.30
+
+@onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
+@onready var gun: Node = get_node_or_null("Gun")
+
+var input_direction := Vector2.ZERO
+var last_move_direction := Vector2.ZERO
+var dash_direction := Vector2.ZERO
+var dash_time_left := 0.0
+var dash_cooldown_left := 0.0
+
+
+func _process(_delta: float) -> void:
+	rotation = 0.0
+	_update_sprite_direction()
+	_update_animation()
+
+
+func _physics_process(delta: float) -> void:
+	input_direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+
+	if input_direction != Vector2.ZERO:
+		last_move_direction = input_direction
+
+	dash_cooldown_left = max(dash_cooldown_left - delta, 0.0)
+
+	if _can_start_dash():
+		_start_dash()
+
+	if dash_time_left > 0.0:
+		dash_time_left = max(dash_time_left - delta, 0.0)
+		velocity = dash_direction * dash_speed
+	else:
+		var target_velocity := input_direction * move_speed
+		var movement_force := acceleration if input_direction != Vector2.ZERO else friction
+		velocity = velocity.move_toward(target_velocity, movement_force * delta)
+
+	move_and_slide()
+
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("mouse_left") and gun != null and gun.has_method("shoot"):
+		gun.shoot()
+
+
+func _can_start_dash() -> bool:
+	return Input.is_action_just_pressed("shift") and dash_cooldown_left <= 0.0 and input_direction != Vector2.ZERO
+
+
+func _start_dash() -> void:
+	dash_direction = last_move_direction.normalized()
+	dash_time_left = dash_duration
+	dash_cooldown_left = dash_cooldown
+
+
+func _update_sprite_direction() -> void:
+	var mouse_pos := get_global_mouse_position()
+	animated_sprite_2d.flip_h = mouse_pos.x < global_position.x
+
+
+func _update_animation() -> void:
+	if velocity.length_squared() > 25.0:
+		animated_sprite_2d.play("Walk")
+	else:
+		animated_sprite_2d.play("Idle")
