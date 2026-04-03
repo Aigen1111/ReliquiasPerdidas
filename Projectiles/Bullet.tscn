@@ -1,13 +1,15 @@
 [gd_scene format=3 uid="uid://bsu7mgu10gwe3"]
 
-[ext_resource type="Script" uid="uid://dr8yvpmo4b048" path="res://Scripts/bullet.gd" id="1_14k46"]
-[ext_resource type="Texture2D" uid="uid://cfm0gnc1b7ra0" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Bullets/bullet.png" id="1_vlxeq"]
+[ext_resource type="Script" uid="uid://dr8yvpmo4b048" path="res://Projectiles/bullet.gd" id="1_js047"]
+[ext_resource type="Texture2D" uid="uid://cfm0gnc1b7ra0" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Bullets/bullet.png" id="2_ft26q"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_14k46"]
 radius = 2.0
 
 [node name="Bullet" type="CharacterBody2D" unique_id=1056571978]
-script = ExtResource("1_14k46")
+collision_layer = 16
+collision_mask = 5
+script = ExtResource("1_js047")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1444238044]
 position = Vector2(1, 1)
@@ -16,4 +18,4 @@ shape = SubResource("CircleShape2D_14k46")
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1002716200]
 position = Vector2(1.05, 1.05)
 scale = Vector2(0.47, 0.941)
-texture = ExtResource("1_vlxeq")
+texture = ExtResource("2_ft26q")
