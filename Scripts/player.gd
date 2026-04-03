@@ -70,3 +70,10 @@ func _update_animation() -> void:
 		animated_sprite_2d.play("Walk")
 	else:
 		animated_sprite_2d.play("Idle")
+		
+func _ready() -> void:
+	Input.set_custom_mouse_cursor(
+		preload("res://Assets/kenney_desert-shooter-pack_1.0/PNG/Weapons/Tiles/tile_0020.png"),
+		Input.CURSOR_ARROW,
+		Vector2(16, 16)
+		)

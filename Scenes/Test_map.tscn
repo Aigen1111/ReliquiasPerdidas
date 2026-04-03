@@ -2,6 +2,7 @@
 
 [ext_resource type="TileSet" uid="uid://bbeaqi88wdns1" path="res://Assets/CutAtlas/map.tres" id="1_ighg8"]
 [ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Scenes/player.tscn" id="2_ei2nq"]
+[ext_resource type="PackedScene" uid="uid://bcp0638qpv25x" path="res://Scenes/Enemy.tscn" id="3_08xbg"]
 
 [node name="Escena Padre" type="Node2D" unique_id=1290126068]
 position = Vector2(684, 383)
@@ -20,3 +21,6 @@ tile_map_data = PackedByteArray("AAD8//7/AQAFAAAAAAD8////AQAFAAEAAAD8/wAAAQAFAAI
 tile_set = ExtResource("1_ighg8")
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="Escena" unique_id=83532085]
+
+[node name="Enemy" parent="Escena" unique_id=1112102907 instance=ExtResource("3_08xbg")]
+position = Vector2(87, -107)
