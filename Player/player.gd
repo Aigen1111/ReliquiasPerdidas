@@ -6,10 +6,15 @@ extends CharacterBody2D
 @export var dash_speed: float = 500.0
 @export var dash_duration: float = 0.10
 @export var dash_cooldown: float = 0.30
+@export var cursor_texture: Texture2D
+@export var max_health: int = 100
 
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
 @onready var gun: Node = get_node_or_null("Gun")
 
+var coins: int = 0
+var current_health: int = 0
+var materials: Dictionary = {}
 var input_direction := Vector2.ZERO
 var last_move_direction := Vector2.ZERO
 var dash_direction := Vector2.ZERO
@@ -70,10 +75,30 @@ func _update_animation() -> void:
 		animated_sprite_2d.play("Walk")
 	else:
 		animated_sprite_2d.play("Idle")
-		
+
+
 func _ready() -> void:
-	Input.set_custom_mouse_cursor(
-		preload("res://Assets/kenney_desert-shooter-pack_1.0/PNG/Weapons/Tiles/tile_0020.png"),
-		Input.CURSOR_ARROW,
-		Vector2(16, 16)
+	add_to_group("player")
+	current_health = max_health
+
+	if cursor_texture != null:
+		Input.set_custom_mouse_cursor(
+			cursor_texture,
+			Input.CURSOR_ARROW,
+			Vector2(16, 16)
 		)
+
+
+func heal(amount: int) -> void:
+	if amount <= 0:
+		return
+
+	current_health = mini(current_health + amount, max_health)
+
+
+func add_material(type, amount: int) -> void:
+	if amount <= 0:
+		return
+
+	var material_key := StringName(type)
+	materials[material_key] = int(materials.get(material_key, 0)) + amount

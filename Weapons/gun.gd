@@ -1,11 +1,10 @@
 extends Sprite2D
 
 @export var fire_cooldown: float = 0.12
+@export var bullet_scene: PackedScene
 
 @onready var marker_2d: Marker2D = $Marker2D
 @onready var shot_audio_player: Node = get_node_or_null("Shoot_sound")
-
-const BULLET_SCENE := preload("res://Scenes/Bullet.tscn")
 
 var cooldown_left := 0.0
 
@@ -22,7 +21,7 @@ func _process(delta: float) -> void:
 
 
 func shoot() -> void:
-	if cooldown_left > 0.0:
+	if cooldown_left > 0.0 or bullet_scene == null:
 		return
 
 	var current_scene := get_tree().current_scene
@@ -34,7 +33,7 @@ func shoot() -> void:
 		return
 
 	var shooter := get_parent() as PhysicsBody2D
-	var new_bullet := BULLET_SCENE.instantiate() as Node2D
+	var new_bullet := bullet_scene.instantiate() as Node2D
 	if new_bullet == null:
 		return
 

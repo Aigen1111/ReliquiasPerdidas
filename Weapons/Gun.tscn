@@ -1,8 +1,9 @@
 [gd_scene format=3 uid="uid://ck811d7pd7xkj"]
 
 [ext_resource type="Texture2D" uid="uid://btfftagg3s8fo" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Weapons/Tiles/tile_0000.png" id="1_m3ict"]
-[ext_resource type="Script" uid="uid://bmltomqjiky2v" path="res://Scripts/gun.gd" id="2_u7kx4"]
+[ext_resource type="Script" uid="uid://bmltomqjiky2v" path="res://Weapons/gun.gd" id="2_u7kx4"]
 [ext_resource type="AudioStream" uid="uid://p36ha1vj3wj3" path="res://Assets/kenney_desert-shooter-pack_1.0/Sounds/hurt-d.ogg" id="3_cgpo0"]
+[ext_resource type="PackedScene" uid="uid://bsu7mgu10gwe3" path="res://Projectiles/Bullet.tscn" id="4_hcifb"]
 
 [node name="Gun" type="Sprite2D" unique_id=802591297]
 position = Vector2(-1, -3.5762787e-07)
@@ -10,6 +11,7 @@ scale = Vector2(1.0833334, 1.125)
 texture = ExtResource("1_m3ict")
 offset = Vector2(2, 0)
 script = ExtResource("2_u7kx4")
+bullet_scene = ExtResource("4_hcifb")
 
 [node name="Marker2D" type="Marker2D" parent="." unique_id=1094726094]
 position = Vector2(5.095, -0.444)
