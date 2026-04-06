@@ -1,5 +1,8 @@
 extends CharacterBody2D
 
+@export var max_health: float = 100.0
+## Segundos que espera después de la animación Dead antes de desaparecer
+@export var death_delay: float = 1.2
 @export var move_speed: float = 220.0
 @export var acceleration: float = 1400.0
 @export var friction: float = 1800.0
@@ -7,19 +10,20 @@ extends CharacterBody2D
 @export var dash_duration: float = 0.10
 @export var dash_cooldown: float = 0.30
 @export var cursor_texture: Texture2D
-@export var max_health: int = 100
+@onready var health_bar: Node2D = $HealthBar
 
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
 @onready var gun: Node = get_node_or_null("Gun")
 
 var coins: int = 0
-var current_health: int = 0
 var materials: Dictionary = {}
 var input_direction := Vector2.ZERO
 var last_move_direction := Vector2.ZERO
 var dash_direction := Vector2.ZERO
 var dash_time_left := 0.0
 var dash_cooldown_left := 0.0
+var current_health: float
+var is_dead := false
 
 
 func _process(_delta: float) -> void:
