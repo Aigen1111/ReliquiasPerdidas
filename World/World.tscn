@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://ds0sv7r5afhn5"]
+
+[ext_resource type="Script" uid="uid://mico8mmuiwfs" path="res://World/World.gd" id="1_folwd"]
+[ext_resource type="PackedScene" uid="uid://tiatgld8vq5o" path="res://Rooms/RoomTransition.tscn" id="2_y6flb"]
+
+[node name="World" type="Node2D" unique_id=211223612]
+script = ExtResource("1_folwd")
+
+[node name="RoomTransition" parent="." unique_id=195713565 instance=ExtResource("2_y6flb")]

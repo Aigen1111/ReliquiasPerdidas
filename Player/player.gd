@@ -83,7 +83,10 @@ func _update_animation() -> void:
 
 func _ready() -> void:
 	add_to_group("player")
-	current_health = max_health
+	if RunManager.is_in_run:
+		current_health = RunManager.player_current_health
+	else:
+		current_health = max_health
 
 	if cursor_texture != null:
 		Input.set_custom_mouse_cursor(
@@ -106,3 +109,26 @@ func add_material(type, amount: int) -> void:
 
 	var material_key := StringName(type)
 	materials[material_key] = int(materials.get(material_key, 0)) + amount
+	
+	
+func _die() -> void:
+	is_dead = true
+	# ... animación de muerte ...
+	await get_tree().create_timer(1.5).timeout
+	RunManager.player_died()   # ← Esta es la línea clave
+	
+	
+func take_damage(amount: float) -> void:
+	if is_dead:
+		return
+	current_health = maxf(current_health - amount, 0.0)
+	# Sincronizar con RunManager para que persista entre transiciones de sala
+	RunManager.player_current_health = current_health
+	# ... tu código de feedback visual (flash, sonido) ...
+	if current_health <= 0.0:
+		_die()
+		
+		
+	
+	
+	

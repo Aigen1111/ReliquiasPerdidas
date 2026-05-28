@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://ceibylg7ki68p"]
+
+[ext_resource type="Script" uid="uid://d1ke0or26sonx" path="res://Scenes/Lobby.gd" id="1_bpe3w"]
+[ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="2_lolwk"]
+[ext_resource type="PackedScene" uid="uid://cxk7ltonuc0jy" path="res://Scenes/Portal.tscn" id="3_wgubu"]
+
+[node name="Lobby" type="Node2D" unique_id=1784873453]
+script = ExtResource("1_bpe3w")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=1502060191]
+
+[node name="Player" parent="." unique_id=591215505 instance=ExtResource("2_lolwk")]
+position = Vector2(628, 355.00003)
+
+[node name="Portal" parent="." unique_id=1782112798 instance=ExtResource("3_wgubu")]
+position = Vector2(-472, -151)
+
+[node name="RelicPedestals" type="Node2D" parent="." unique_id=1328142068]
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=684270851]
+
+[node name="RelicsLabel" type="Label" parent="HUD" unique_id=1071387314]
+offset_right = 40.0
+offset_bottom = 23.0

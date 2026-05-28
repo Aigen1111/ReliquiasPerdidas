@@ -56,7 +56,7 @@ animations = [{
 radius = 1.6666565
 height = 3.3333282
 
-[node name="Player" type="CharacterBody2D" unique_id=591215505]
+[node name="Player" type="CharacterBody2D" unique_id=591215505 groups=["Player"]]
 position = Vector2(579.00006, 353.00003)
 scale = Vector2(5, 5)
 collision_layer = 2

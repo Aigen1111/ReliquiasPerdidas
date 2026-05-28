@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+signal died
+
 @export var max_health: float = 100.0
 ## Segundos que espera después de la animación Dead antes de desaparecer
 @export var death_delay: float = 1.2
@@ -32,6 +34,8 @@ func take_damage(amount: float) -> void:
 
 func _die() -> void:
 	is_dead = true
+	died.emit()
+	
 	animated_sprite.play("Dead")
 	# Desactivar colisión para que nada más interactúe con el cadáver
 	collision_shape.set_deferred("disabled", true)

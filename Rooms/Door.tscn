@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://bff82rg0nj84m"]
+
+[ext_resource type="Script" uid="uid://bp4pb1ykgk5fh" path="res://Rooms/door.gd" id="1_1cj3k"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_kmacj"]
+
+[node name="Door" type="Area2D" unique_id=42279943]
+script = ExtResource("1_1cj3k")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=945850522]
+shape = SubResource("CircleShape2D_kmacj")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=2050760732]
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0

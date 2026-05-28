@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://cxk7ltonuc0jy"]
+
+[ext_resource type="Script" uid="uid://dklwaw5uy4ya" path="res://Scenes/Portal.gd" id="1_mdgx6"]
+[ext_resource type="Texture2D" uid="uid://chd4i2cat8is6" path="res://icon.svg" id="2_bseyl"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_mtwac"]
+radius = 60.0
+
+[node name="Portal" type="Area2D" unique_id=594001877]
+z_index = -1
+collision_mask = 2
+script = ExtResource("1_mdgx6")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1865402465]
+position = Vector2(668, 317)
+shape = SubResource("CircleShape2D_mtwac")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=555920991]
+position = Vector2(665, 320)
+texture = ExtResource("2_bseyl")
+
+[node name="PromptLabel" type="Label" parent="." unique_id=1904473090]
+offset_left = 591.0
+offset_top = 221.0
+offset_right = 797.0
+offset_bottom = 244.0
+text = "Presiona E para Iniciar"
