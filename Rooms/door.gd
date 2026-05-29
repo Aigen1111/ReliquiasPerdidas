@@ -1,26 +1,52 @@
 extends Area2D
 
-signal player_entered_door(next_room_path: String)
+signal player_entered_door
 
 @export var next_room_path: String = ""
 var is_locked: bool = true
+var player_inside: bool = false
 
 @onready var visual = $ColorRect
+@onready var prompt_label: Label = $PromptLabel
 
 func _ready():
-	# Conectamos la señal que detecta cuando un cuerpo entra al Area2D
 	body_entered.connect(_on_body_entered)
+	body_exited.connect(_on_body_exited)
 	lock()
+
+func _process(_delta: float) -> void:
+	if player_inside and not is_locked and Input.is_action_just_pressed("interact"):
+		emit_signal("player_entered_door")
 
 func lock():
 	is_locked = true
-	if visual: visual.color = Color.RED # Rojo = Bloqueada
+	if visual:
+		visual.color = Color.RED
+	_hide_prompt()
 
 func unlock():
 	is_locked = false
-	if visual: visual.color = Color.GREEN # Verde = Abierta
+	if visual:
+		visual.color = Color.GREEN
+	# Si el jugador ya está dentro cuando se abre, mostrar el prompt
+	if player_inside:
+		_show_prompt()
 
 func _on_body_entered(body: Node2D):
-	# Verificamos que la puerta esté abierta y que quien entró sea el Jugador
-	if not is_locked and body.is_in_group("Player"):
-		player_entered_door.emit(next_room_path)
+	if body.is_in_group("player"):
+		player_inside = true
+		if not is_locked:
+			_show_prompt()
+
+func _on_body_exited(body: Node2D):
+	if body.is_in_group("player"):
+		player_inside = false
+		_hide_prompt()
+
+func _show_prompt() -> void:
+	if is_instance_valid(prompt_label):
+		prompt_label.show()
+
+func _hide_prompt() -> void:
+	if is_instance_valid(prompt_label):
+		prompt_label.hide()

@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://jnfnmfvh5yyn"]
+
+[ext_resource type="PackedScene" uid="uid://gp7c2nxjvi2a" path="res://Rooms/Room.tscn" id="1_4vqmd"]
+[ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="2_gvb8p"]
+[ext_resource type="PackedScene" uid="uid://bcp0638qpv25x" path="res://Enemies/Enemy.tscn" id="3_3teri"]
+[ext_resource type="PackedScene" uid="uid://bff82rg0nj84m" path="res://Rooms/Door.tscn" id="4_d8i3j"]
+
+[node name="Room" unique_id=25606539 instance=ExtResource("1_4vqmd")]
+
+[node name="Player" parent="." index="0" unique_id=591215505 instance=ExtResource("2_gvb8p")]
+position = Vector2(616.00006, 688)
+
+[node name="Enemy" parent="." index="1" unique_id=2056591160 instance=ExtResource("3_3teri")]
+position = Vector2(226, 513)
+
+[node name="Enemy2" parent="." index="2" unique_id=406932317 instance=ExtResource("3_3teri")]
+position = Vector2(600, 520)
+
+[node name="Enemy3" parent="." index="3" unique_id=1998803357 instance=ExtResource("3_3teri")]
+position = Vector2(941, 544)
+
+[node name="Door" parent="." index="4" unique_id=42279943 instance=ExtResource("4_d8i3j")]
+position = Vector2(599, 410)
+collision_mask = 2

@@ -5,6 +5,7 @@
 [sub_resource type="CircleShape2D" id="CircleShape2D_kmacj"]
 
 [node name="Door" type="Area2D" unique_id=42279943]
+collision_mask = 2
 script = ExtResource("1_1cj3k")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=945850522]
@@ -15,3 +16,10 @@ offset_left = -10.0
 offset_top = -10.0
 offset_right = 10.0
 offset_bottom = 10.0
+
+[node name="PromptLabel" type="Label" parent="." unique_id=320640464]
+offset_left = -50.0
+offset_top = -34.0
+offset_right = 60.0
+offset_bottom = -11.0
+text = "\"E — Avanzar\""

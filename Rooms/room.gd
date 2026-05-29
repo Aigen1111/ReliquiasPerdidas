@@ -4,16 +4,18 @@ var enemies_alive: int = 0
 var is_cleared: bool = false
 
 func _ready():
-	# Al cargar la sala, contamos cuántos enemigos hay y bloqueamos las puertas
 	for child in get_children():
 		if child.is_in_group("Enemy"):
 			enemies_alive += 1
-			# Conectamos la señal "died" que le pusimos a tu enemigo
 			child.died.connect(_on_enemy_died)
 		elif child is Area2D and child.has_method("lock"):
 			child.lock()
-	
-	# Si entras a una sala y no hay enemigos, se abre sola
+
+	var exit_door = get_node_or_null("Door")
+	if exit_door:
+		# Escuchar la señal del door en lugar de body_entered directamente
+		exit_door.player_entered_door.connect(_on_player_entered_door)
+
 	if enemies_alive == 0:
 		clear_room()
 
@@ -24,7 +26,10 @@ func _on_enemy_died():
 
 func clear_room():
 	is_cleared = true
-	# Abrimos todas las puertas de la sala
 	for child in get_children():
 		if child is Area2D and child.has_method("unlock"):
 			child.unlock()
+
+func _on_player_entered_door():
+	if is_cleared:
+		RunManager.advance_room()

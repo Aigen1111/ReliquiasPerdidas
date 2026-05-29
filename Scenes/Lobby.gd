@@ -30,7 +30,7 @@ func _ready() -> void:
 
 
 func _update_hud() -> void:
-	var count: int = RunManager.collected_relics.size()
+	var count: int = RunManager.unlocked_relics.size()
 	relics_label.text = "Reliquias: %d" % count
 	if RunManager.last_run_floor > 0:
 		var result := "Victoria ✓" if RunManager.last_run_victory else "Derrota ✗"
@@ -38,8 +38,6 @@ func _update_hud() -> void:
 
 
 func _populate_relic_pedestals() -> void:
-	# Los pedestales se auto-configuran con los datos de RunManager.
-	# Cada pedestal espera un método setup(relic_id) — ver RelicPedestal.gd
 	if not has_node("RelicPedestals"):
 		return
 	var pedestals := $RelicPedestals.get_children()
@@ -47,7 +45,7 @@ func _populate_relic_pedestals() -> void:
 		var pedestal := pedestals[i]
 		if not pedestal.has_method("setup"):
 			continue
-		if i < RunManager.collected_relics.size():
-			pedestal.setup(RunManager.collected_relics[i])
+		if i < RunManager.unlocked_relics.size():
+			pedestal.setup(RunManager.unlocked_relics[i])
 		else:
-			pedestal.setup("")   # Pedestal vacío
+			pedestal.setup("")

@@ -20,8 +20,8 @@ position = Vector2(665, 320)
 texture = ExtResource("2_bseyl")
 
 [node name="PromptLabel" type="Label" parent="." unique_id=1904473090]
-offset_left = 591.0
-offset_top = 221.0
-offset_right = 797.0
-offset_bottom = 244.0
-text = "Presiona E para Iniciar"
+offset_left = 620.0
+offset_top = 225.0
+offset_right = 826.0
+offset_bottom = 248.0
+text = "Presiona E"

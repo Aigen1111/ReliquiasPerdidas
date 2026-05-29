@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://b5npwitjfct1e"]
+
+[ext_resource type="PackedScene" uid="uid://gp7c2nxjvi2a" path="res://Rooms/Room.tscn" id="1_wjvn4"]
+[ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="2_6kr5e"]
+[ext_resource type="PackedScene" uid="uid://bff82rg0nj84m" path="res://Rooms/Door.tscn" id="3_0lyda"]
+
+[node name="Room" unique_id=25606539 instance=ExtResource("1_wjvn4")]
+
+[node name="Player" parent="." index="0" unique_id=591215505 instance=ExtResource("2_6kr5e")]
+position = Vector2(616.00006, 688)
+
+[node name="Door" parent="." index="1" unique_id=42279943 instance=ExtResource("3_0lyda")]
+position = Vector2(599, 410)
