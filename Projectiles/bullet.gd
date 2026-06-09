@@ -1,10 +1,21 @@
+# bullet.gd
+# ─────────────────────────────────────────────────────────────────────────────
+# FIX: las balas ya NO dañan al shooter ni a sus aliados.
+# setup() recibe el shooter y lo agrega a las excepciones de colisión.
+# Adicionalmente se agrega un tag "team" para distinguir balas del jugador
+# vs balas de enemigos — ambas usan el mismo script pero con distinto team.
+#
+# team = "player"  → solo daña a nodos del grupo "Enemy"
+# team = "enemy"   → solo daña a nodos del grupo "player"
+# ─────────────────────────────────────────────────────────────────────────────
 extends CharacterBody2D
 
-@export var speed: float = 650.0
+@export var speed:    float = 650.0
 @export var lifetime: float = 1.0
-@export var damage: float = 25.0  # Daño por bala
+@export var damage:   float = 25.0
 
 var direction := Vector2.ZERO
+var team:       String = "player"   # se sobreescribe en setup()
 
 
 func _ready() -> void:
@@ -16,21 +27,33 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var collision := move_and_collide(direction * speed * delta)
-	if collision != null:
-		var collider := collision.get_collider()
-		# Si el objeto golpeado tiene take_damage, es un enemigo
-		if collider != null and collider.has_method("take_damage"):
+	if collision == null:
+		return
+
+	var collider := collision.get_collider()
+	if collider != null and collider.has_method("take_damage"):
+		# Solo dañar al equipo contrario
+		var should_damage: bool = false
+		if team == "player" and collider.is_in_group("Enemy"):
+			should_damage = true
+		elif team == "enemy" and collider.is_in_group("player"):
+			should_damage = true
+
+		if should_damage:
 			collider.take_damage(damage)
-		# En cualquier caso la bala desaparece (tile o enemigo)
-		queue_free()
+
+	queue_free()
 
 
-func setup(travel_direction: Vector2, ignored_body: PhysicsBody2D = null) -> void:
+func setup(travel_direction: Vector2, shooter: PhysicsBody2D = null, bullet_team: String = "player") -> void:
 	if travel_direction == Vector2.ZERO:
 		return
 
-	if ignored_body != null:
-		add_collision_exception_with(ignored_body)
+	team = bullet_team
+
+	# Ignorar colisión física con el shooter para evitar auto-daño
+	if shooter != null:
+		add_collision_exception_with(shooter)
 
 	direction = travel_direction.normalized()
 	global_rotation = direction.angle()

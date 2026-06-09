@@ -3,6 +3,8 @@
 [ext_resource type="Script" uid="uid://57yl05e5aaw3" path="res://Rooms/room.gd" id="1_b6t71"]
 [ext_resource type="Texture2D" uid="uid://cpribaw247mou" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Tiles/Tilemap/tilemap.png" id="2_pchdy"]
 [ext_resource type="Texture2D" uid="uid://df57nq10fs3cc" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Tiles/Tilemap/tilemap_packed.png" id="3_y2qlv"]
+[ext_resource type="PackedScene" uid="uid://6gmonqjiuy4" path="res://Scenes/RunResultScreen.tscn" id="4_s5b6c"]
+[ext_resource type="PackedScene" uid="uid://bylteprtni82b" path="res://Scenes/RunHUD.tscn" id="5_1f0yi"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_y2qlv"]
 texture = ExtResource("2_pchdy")
@@ -499,5 +501,8 @@ sources/1 = SubResource("TileSetAtlasSource_s5b6c")
 script = ExtResource("1_b6t71")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=1591151225]
-tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 1, 0, 10, 0, 8, 0, 0, 0)
 tile_set = SubResource("TileSet_s5b6c")
+
+[node name="RunResultScreen" parent="." unique_id=1532628982 instance=ExtResource("4_s5b6c")]
+
+[node name="RunHud" parent="." unique_id=58245182 instance=ExtResource("5_1f0yi")]

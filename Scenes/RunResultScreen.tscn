@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://6gmonqjiuy4"]
+
+[ext_resource type="Script" uid="uid://jacccwfbol83" path="res://Scenes/RunResultScreen.gd" id="1_j7rr7"]
+
+[node name="RunResultScreen" type="CanvasLayer" unique_id=1532628982]
+layer = 20
+script = ExtResource("1_j7rr7")
+
+[node name="Panel" type="Panel" parent="." unique_id=354601482]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -160.0
+offset_right = 250.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=2105204545]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer" unique_id=11760473]
+layout_mode = 2
+text = "Resultado"
+
+[node name="FloorLabel" type="Label" parent="Panel/VBoxContainer" unique_id=363154789]
+layout_mode = 2
+
+[node name="GoldLabel" type="Label" parent="Panel/VBoxContainer" unique_id=1625491336]
+layout_mode = 2
+
+[node name="RelicLabel" type="Label" parent="Panel/VBoxContainer" unique_id=1119236951]
+layout_mode = 2
+
+[node name="ContinueButton" type="Button" parent="Panel/VBoxContainer" unique_id=1269413552]
+layout_mode = 2
+text = "Volver al museo
+"
