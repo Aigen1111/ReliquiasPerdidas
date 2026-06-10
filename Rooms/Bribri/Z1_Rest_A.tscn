@@ -8,6 +8,7 @@
 [node name="Room" unique_id=25606539 instance=ExtResource("1_4vqmd")]
 script = ExtResource("2_4nksk")
 heal_percent = 0.3
+heal_offset = Vector2(0, -120)
 
 [node name="Player" parent="." index="0" unique_id=591215505 instance=ExtResource("2_gvb8p")]
 position = Vector2(616.00006, 688)

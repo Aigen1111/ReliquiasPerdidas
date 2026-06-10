@@ -1,46 +1,20 @@
-# RunManager.gd
-# ─────────────────────────────────────────────────────────────────────────────
-# Autoload singleton. Gestiona el estado completo del juego:
-#   - Progresión de áreas y zonas
-#   - Selección aleatoria ponderada de rooms por run
-#   - Oro (divisa global, 50% se pierde al morir)
-#   - Reliquias desbloqueadas y activas
-#   - Vida del jugador entre transiciones de sala
-#
-# SETUP: Proyecto → Ajustes del Proyecto → Autoload
-#        Ruta: res://RunManager.gd   Nombre: RunManager
-# ─────────────────────────────────────────────────────────────────────────────
+# RunManager.gd — Autoload singleton
+# CAMBIOS: _end_run ahora NO cambia de escena automáticamente.
+# Emite run_ended y espera a que RunResultScreen llame a go_to_lobby().
+# Esto permite que la pantalla de resultado se muestre antes del cambio.
 extends Node
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  Señales
-# ═══════════════════════════════════════════════════════════════════════════
 signal gold_changed(new_amount: int)
 signal relic_unlocked(relic_id: String)
 signal area_unlocked(area_id: String)
 signal run_started(area_id: String)
 signal run_ended(victory: bool, gold_earned: int)
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  Rutas de escenas
-# ═══════════════════════════════════════════════════════════════════════════
 const LOBBY_SCENE := "res://Scenes/Lobby.tscn"
 const BOSS_SCENES := {
 	"bribri": "res://Rooms/Bribri/BossRoom_Bribri.tscn",
-	# "greek":  "res://Rooms/BossRoom_Greek.tscn",
 }
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  Definición de áreas y sus pools de rooms
-# ═══════════════════════════════════════════════════════════════════════════
-# Cada área tiene 3 zonas. Cada zona tiene un pool de 7 rooms.
-# Por run se eligen ROOMS_PER_ZONE rooms de cada pool sin repetición.
-# Restricción: nunca dos rooms del mismo tipo especial seguidas.
-#
-# Formato: { "scene": "res://...", "type": "combat"|"rest"|"museum"|"reward" }
 const ROOMS_PER_ZONE := 4
 
 const AREA_DATA := {
@@ -89,10 +63,7 @@ const AREA_DATA := {
 
 const AREA_UNLOCK_ORDER := ["bribri"]
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  Estado persistente (sobrevive entre runs)
-# ═══════════════════════════════════════════════════════════════════════════
+# ── Estado persistente ────────────────────────────────────────────────────
 var gold: int = 0
 var unlocked_areas: Array = ["bribri"]
 var unlocked_relics: Array = []
@@ -101,10 +72,7 @@ var last_run_victory: bool = false
 var last_run_floor: int = 0
 var last_run_gold_earned: int = 0
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  Estado del run activo
-# ═══════════════════════════════════════════════════════════════════════════
+# ── Estado del run activo ─────────────────────────────────────────────────
 var is_in_run: bool = false
 var current_area_id: String = ""
 var current_zone_index: int = 0
@@ -113,11 +81,9 @@ var run_sequence: Array = []
 var gold_this_run: int = 0
 var player_current_health: float = 100.0
 var player_max_health: float = 100.0
+var relics_found_this_run: Array = []
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  API pública — run
-# ═══════════════════════════════════════════════════════════════════════════
+# ── API run ───────────────────────────────────────────────────────────────
 
 func start_run(area_id: String = "bribri") -> void:
 	assert(area_id in AREA_DATA, "RunManager: área desconocida '%s'" % area_id)
@@ -128,18 +94,28 @@ func start_run(area_id: String = "bribri") -> void:
 	current_room_index = 0
 	gold_this_run = 0
 	player_current_health = player_max_health
+	relics_found_this_run = []
 	run_sequence = _build_run_sequence(area_id)
 	emit_signal("run_started", area_id)
 	_load_current_room()
 
 
-## Llamado por room.gd cuando el jugador termina la sala y toca la puerta de salida
 func advance_room() -> void:
 	assert(is_in_run, "RunManager.advance_room llamado fuera de un run")
 	current_room_index += 1
 	current_zone_index = _zone_for_index(current_room_index)
 	if current_room_index < run_sequence.size():
 		_load_current_room()
+
+## Llamado por portales: carga la escena específica que eligió el jugador
+## y la registra en la secuencia para que el piso count sea correcto.
+func choose_room(scene_path: String) -> void:
+	assert(is_in_run, "RunManager.choose_room llamado fuera de un run")
+	current_room_index += 1
+	current_zone_index = _zone_for_index(current_room_index)
+	if current_room_index < run_sequence.size():
+		run_sequence[current_room_index] = scene_path
+	get_tree().change_scene_to_file(scene_path)
 
 
 func player_died() -> void:
@@ -164,11 +140,13 @@ func complete_run() -> void:
 	_end_run(true)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-#  API pública — oro
-# ═══════════════════════════════════════════════════════════════════════════
+## Llamado por RunResultScreen cuando el jugador presiona "Continuar"
+func go_to_lobby() -> void:
+	get_tree().change_scene_to_file(LOBBY_SCENE)
 
-## Oro temporal de la run (enemigos, salas). Se muestra en el HUD.
+
+# ── API oro ───────────────────────────────────────────────────────────────
+
 func add_run_gold(amount: int) -> void:
 	if amount <= 0:
 		return
@@ -176,7 +154,6 @@ func add_run_gold(amount: int) -> void:
 	emit_signal("gold_changed", get_display_gold())
 
 
-## Gastar del banco (lobby — mejoras, pedestales)
 func spend_gold(amount: int) -> bool:
 	if gold < amount:
 		return false
@@ -189,13 +166,12 @@ func get_display_gold() -> int:
 	return gold + gold_this_run
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-#  API pública — reliquias
-# ═══════════════════════════════════════════════════════════════════════════
+# ── API reliquias ─────────────────────────────────────────────────────────
 
 func unlock_relic(relic_id: String) -> void:
 	if relic_id not in unlocked_relics:
 		unlocked_relics.append(relic_id)
+		relics_found_this_run.append(relic_id)
 		emit_signal("relic_unlocked", relic_id)
 
 
@@ -207,9 +183,7 @@ func has_active_relic(relic_id: String) -> bool:
 	return relic_id in active_relics
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-#  Construcción de la secuencia del run
-# ═══════════════════════════════════════════════════════════════════════════
+# ── Construcción de secuencia ─────────────────────────────────────────────
 
 func _build_run_sequence(area_id: String) -> Array:
 	var sequence: Array = []
@@ -237,14 +211,12 @@ func _pick_rooms_from_pool(pool: Array) -> Array:
 		last_type = t
 		if t == "combat":
 			combat_count += 1
-	# Rellenar si las restricciones dejaron menos de ROOMS_PER_ZONE
 	if selected.size() < ROOMS_PER_ZONE:
 		for entry: Dictionary in shuffled:
 			if selected.size() >= ROOMS_PER_ZONE:
 				break
 			if entry not in selected:
 				selected.append(entry)
-	# Garantizar mínimo 2 combates
 	if combat_count < 2:
 		for i in range(selected.size() - 1, -1, -1):
 			if combat_count >= 2:
@@ -262,9 +234,7 @@ func _zone_for_index(room_index: int) -> int:
 	return clamp(room_index / ROOMS_PER_ZONE, 0, 2)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-#  Internos
-# ═══════════════════════════════════════════════════════════════════════════
+# ── Internos ──────────────────────────────────────────────────────────────
 
 func _load_current_room() -> void:
 	get_tree().change_scene_to_file(run_sequence[current_room_index])
@@ -272,8 +242,9 @@ func _load_current_room() -> void:
 
 func _end_run(victory: bool) -> void:
 	is_in_run = false
+	# Solo emitir señal — RunResultScreen escucha y muestra la pantalla.
+	# El cambio a Lobby lo hace go_to_lobby() cuando el jugador presiona Continuar.
 	emit_signal("run_ended", victory, last_run_gold_earned)
-	get_tree().change_scene_to_file(LOBBY_SCENE)
 
 
 func _add_gold(amount: int) -> void:

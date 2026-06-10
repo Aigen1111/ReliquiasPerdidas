@@ -1,166 +1,145 @@
-# room.gd — Sala de combate con oleadas
-# ─────────────────────────────────────────────────────────────────────────────
-# CAMBIOS vs versión anterior:
-#   - Fix race condition: la puerta ya NO se abre en _ready antes de que terminen
-#     de spawnear los enemigos. El check se hace al final del propio spawn.
-#   - Sistema de oleadas: los enemigos se dividen en grupos y spawnean
-#     progresivamente. La puerta solo se abre al terminar la última oleada.
-#   - Cantidad total de enemigos aleatoria dentro de un rango por zona.
-# ─────────────────────────────────────────────────────────────────────────────
-extends Node2D
+# room.gd — Sala de combate con oleadas y spawn indicators
+extends "res://Rooms/portal_room.gd"
 
-# ── Pools de enemigos por zona ─────────────────────────────────────────────
 const ENEMY_POOLS: Array = [
-	# Zona 0 — Jungla
-	[
-		"res://Enemies/EnemyLancero.tscn",
-		"res://Enemies/EnemyEscudo.tscn",
-	],
-	# Zona 1 — Ruinas
-	[
-		"res://Enemies/EnemyLancero.tscn",
-		"res://Enemies/EnemyEscudo.tscn",
-		"res://Enemies/EnemyAmetralladora.tscn",
-	],
-	# Zona 2 — Corrupta
-	[
-		"res://Enemies/EnemyAmetralladora.tscn",
-		"res://Enemies/EnemyFrancotirador.tscn",
-		"res://Enemies/EnemyLancero.tscn",
-		"res://Enemies/EnemyEscudo.tscn",
-	],
+	["res://Enemies/EnemyLancero.tscn", "res://Enemies/EnemyEscudo.tscn"],
+	["res://Enemies/EnemyLancero.tscn", "res://Enemies/EnemyEscudo.tscn", "res://Enemies/EnemyAmetralladora.tscn"],
+	["res://Enemies/EnemyAmetralladora.tscn", "res://Enemies/EnemyFrancotirador.tscn", "res://Enemies/EnemyLancero.tscn", "res://Enemies/EnemyEscudo.tscn"],
 ]
-
-# ── Config de oleadas por zona ─────────────────────────────────────────────
-# [total_min, total_max, oleadas]
-# Las oleadas son proporciones que suman 1.0 — se reparten del total aleatorio.
-# Ejemplo zona 0: entre 4 y 6 enemigos en 2 oleadas (50% / 50%)
 const WAVE_CONFIG: Array = [
-	{ "min": 4, "max": 6,  "waves": [0.5, 0.5] },           # Zona 0 — Jungla
-	{ "min": 6, "max": 9,  "waves": [0.34, 0.33, 0.33] },   # Zona 1 — Ruinas
-	{ "min": 8, "max": 12, "waves": [0.25, 0.35, 0.40] },   # Zona 2 — Corrupta
+	{ "min": 4, "max": 6,  "waves": [0.5, 0.5] },
+	{ "min": 6, "max": 9,  "waves": [0.34, 0.33, 0.33] },
+	{ "min": 8, "max": 12, "waves": [0.25, 0.35, 0.40] },
 ]
+const SPAWN_WARN_DURATION: float = 3.0
+const WAVE_DELAY:          float = 1.0
 
-# ── Tiempo entre oleadas (segundos) ───────────────────────────────────────
-const WAVE_DELAY: float = 1.5
-
-# ── Estado ────────────────────────────────────────────────────────────────
-var enemies_alive:    int  = 0
-var is_cleared:       bool = false
+var enemies_alive:    int   = 0
 var _spawn_positions: Array = []
-var _wave_sizes:      Array = []   # [int] — cuántos spawnear por oleada
+var _wave_sizes:      Array = []
 var _current_wave:    int   = 0
 var _zone:            int   = 0
 var _pool:            Array = []
 
 
 func _ready() -> void:
-	# Recolectar posiciones placeholder y eliminarlos
+	_setup_portal_base()
+
 	for child in get_children():
 		if child.is_in_group("Enemy"):
 			_spawn_positions.append(child.global_position)
 			child.queue_free()
 
-	# Conectar puerta — empieza BLOQUEADA (lock() ya es el estado inicial de door.gd)
-	var exit_door = get_node_or_null("Door")
-	if exit_door:
-		exit_door.player_entered_door.connect(_on_player_entered_door)
-
-	# Calcular oleadas y arrancar spawn
 	_zone = clamp(RunManager.current_zone_index, 0, WAVE_CONFIG.size() - 1)
 	_pool = ENEMY_POOLS[_zone]
 	_wave_sizes = _calculate_waves()
 
-	# Si no hay posiciones placeholder, abrir directo (sala vacía por diseño)
 	if _spawn_positions.is_empty():
-		clear_room()
+		_open_portals()
 		return
 
-	await get_tree().process_frame  # esperar queue_free de placeholders
-	_spawn_wave()
+	await get_tree().process_frame
+	_show_wave_indicators()
 
-
-# ── Cálculo de oleadas ─────────────────────────────────────────────────────
 
 func _calculate_waves() -> Array:
 	var cfg: Dictionary = WAVE_CONFIG[_zone]
-	var total: int = randi_range(cfg["min"], cfg["max"])
-	# Limitar al número de posiciones disponibles
-	total = min(total, _spawn_positions.size())
-
-	var proportions: Array = cfg["waves"]
+	var total: int = min(randi_range(cfg["min"], cfg["max"]), _spawn_positions.size())
 	var sizes: Array = []
 	var assigned: int = 0
-
-	for i in range(proportions.size()):
-		var count: int
-		if i == proportions.size() - 1:
-			# Última oleada toma el resto para que sumen exacto
-			count = total - assigned
-		else:
-			count = max(1, int(total * proportions[i]))
+	for i in range(cfg["waves"].size()):
+		var count: int = total - assigned if i == cfg["waves"].size() - 1 else max(1, int(total * cfg["waves"][i]))
 		sizes.append(count)
 		assigned += count
-
 	return sizes
 
 
-# ── Spawn de oleada ────────────────────────────────────────────────────────
-
-func _spawn_wave() -> void:
-	if _current_wave >= _wave_sizes.size():
-		return
-
-	var count: int = _wave_sizes[_current_wave]
-
-	# Usar posiciones disponibles (las siguientes del array según oleada)
+func _show_wave_indicators() -> void:
 	var start_idx: int = 0
 	for i in range(_current_wave):
 		start_idx += _wave_sizes[i]
+
+	var count: int = _wave_sizes[_current_wave] if _current_wave < _wave_sizes.size() else 0
+	var indicators: Array = []
 
 	for i in range(count):
 		var pos_idx: int = start_idx + i
 		if pos_idx >= _spawn_positions.size():
 			break
+		var ind := _build_spawn_indicator(_spawn_positions[pos_idx])
+		add_child(ind)
+		indicators.append(ind)
 
-		var scene_path: String = _pool[randi() % _pool.size()]
-		var scene: PackedScene = load(scene_path)
+	await _animate_indicators(indicators)
+	for ind in indicators:
+		if is_instance_valid(ind):
+			ind.queue_free()
+	_spawn_wave()
+
+
+func _build_spawn_indicator(world_pos: Vector2) -> Node2D:
+	var node := Node2D.new()
+	node.global_position = world_pos
+	var rect := ColorRect.new()
+	rect.color    = Color(1.0, 0.15, 0.15, 0.7)
+	rect.size     = Vector2(36, 36)
+	rect.position = Vector2(-18, -18)
+	node.add_child(rect)
+	var lbl := Label.new()
+	lbl.name                  = "CountLabel"
+	lbl.text                  = str(int(SPAWN_WARN_DURATION))
+	lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.position              = Vector2(-20, -28)
+	lbl.add_theme_font_size_override("font_size", 18)
+	node.add_child(lbl)
+	return node
+
+
+func _animate_indicators(indicators: Array) -> void:
+	var elapsed: float = 0.0
+	while elapsed < SPAWN_WARN_DURATION:
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+		var remaining: int  = max(1, int(ceil(SPAWN_WARN_DURATION - elapsed)))
+		var pulse:     float = 0.5 + 0.5 * sin(elapsed * TAU * 2.0)
+		for ind in indicators:
+			if not is_instance_valid(ind):
+				continue
+			var rect: ColorRect = ind.get_node_or_null("ColorRect")
+			if rect:
+				rect.color = Color(1.0, 0.15, 0.15, 0.4 + 0.4 * pulse)
+			var lbl: Label = ind.get_node_or_null("CountLabel")
+			if lbl:
+				lbl.text = str(remaining)
+
+
+func _spawn_wave() -> void:
+	if _current_wave >= _wave_sizes.size():
+		return
+	var start_idx: int = 0
+	for i in range(_current_wave):
+		start_idx += _wave_sizes[i]
+	for i in range(_wave_sizes[_current_wave]):
+		var pos_idx: int = start_idx + i
+		if pos_idx >= _spawn_positions.size():
+			break
+		var scene: PackedScene = load(_pool[randi() % _pool.size()])
 		if scene == null:
-			push_warning("room.gd: no se pudo cargar %s" % scene_path)
 			continue
-
 		var enemy = scene.instantiate()
 		add_child(enemy)
 		enemy.global_position = _spawn_positions[pos_idx]
 		enemy.died.connect(_on_enemy_died)
 		enemies_alive += 1
-
 	_current_wave += 1
 
-
-# ── Callbacks ──────────────────────────────────────────────────────────────
 
 func _on_enemy_died() -> void:
 	enemies_alive -= 1
 	if enemies_alive > 0:
 		return
-
-	# Si quedan oleadas, esperar y spawnear la siguiente
 	if _current_wave < _wave_sizes.size():
 		await get_tree().create_timer(WAVE_DELAY).timeout
-		_spawn_wave()
+		_show_wave_indicators()
 	else:
-		# Todas las oleadas terminadas
-		clear_room()
-
-
-func clear_room() -> void:
-	is_cleared = true
-	for child in get_children():
-		if child is Area2D and child.has_method("unlock"):
-			child.unlock()
-
-
-func _on_player_entered_door() -> void:
-	if is_cleared:
-		RunManager.advance_room()
+		_open_portals()
