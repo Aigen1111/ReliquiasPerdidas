@@ -43,6 +43,11 @@ func shoot() -> void:
 	if new_bullet.has_method("setup"):
 		new_bullet.call("setup", aim_direction, shooter)
 
+	# Flecha del Awá: +15% daño de proyectiles
+	if RunManager.has_active_relic("flecha_awa"):
+		var relic: Dictionary = MuseumData.get_relic("flecha_awa")
+		new_bullet.damage *= (1.0 + float(relic.get("bonus_value", 0.0)))
+
 	_play_shot_sound()
 	cooldown_left = fire_cooldown
 

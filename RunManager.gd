@@ -78,6 +78,7 @@ var current_area_id: String = ""
 var current_zone_index: int = 0
 var current_room_index: int = 0
 var run_sequence: Array = []
+var room_type_history: Array = []  # tipos de sala visitados en orden
 var gold_this_run: int = 0
 var player_current_health: float = 100.0
 var player_max_health: float = 100.0
@@ -95,6 +96,7 @@ func start_run(area_id: String = "bribri") -> void:
 	gold_this_run = 0
 	player_current_health = player_max_health
 	relics_found_this_run = []
+	room_type_history = []
 	run_sequence = _build_run_sequence(area_id)
 	emit_signal("run_started", area_id)
 	_load_current_room()
@@ -111,11 +113,32 @@ func advance_room() -> void:
 ## y la registra en la secuencia para que el piso count sea correcto.
 func choose_room(scene_path: String) -> void:
 	assert(is_in_run, "RunManager.choose_room llamado fuera de un run")
+	if current_room_index < run_sequence.size():
+		room_type_history.append(_scene_type(run_sequence[current_room_index]))
 	current_room_index += 1
 	current_zone_index = _zone_for_index(current_room_index)
 	if current_room_index < run_sequence.size():
 		run_sequence[current_room_index] = scene_path
 	get_tree().change_scene_to_file(scene_path)
+
+
+## Cuántas salas seguidas sin combate lleva el jugador
+func non_combat_streak() -> int:
+	var streak: int = 0
+	for i in range(room_type_history.size() - 1, -1, -1):
+		if room_type_history[i] == "combat":
+			break
+		streak += 1
+	return streak
+
+
+func _scene_type(scene_path: String) -> String:
+	if "Combat" in scene_path: return "combat"
+	if "Rest"   in scene_path: return "rest"
+	if "Reward" in scene_path: return "reward"
+	if "Museum" in scene_path: return "museum"
+	if "Boss"   in scene_path: return "boss"
+	return "combat"
 
 
 func player_died() -> void:
@@ -196,37 +219,75 @@ func _build_run_sequence(area_id: String) -> Array:
 
 
 func _pick_rooms_from_pool(pool: Array) -> Array:
+	# Reglas:
+	# 1. Nunca dos non-combat seguidos (rest, reward, museum siempre separados por combat)
+	# 2. Mínimo 2 combates por zona
+	# 3. Exactamente ROOMS_PER_ZONE salas
 	var shuffled := pool.duplicate()
 	shuffled.shuffle()
+
+	# Separar por tipo
+	var combats:  Array = shuffled.filter(func(e): return e["type"] == "combat")
+	var specials: Array = shuffled.filter(func(e): return e["type"] != "combat")
+	specials.shuffle()
+
+	# Construir secuencia intercalada: combat, special, combat, special...
+	# Siempre empieza con combat y nunca pone dos specials seguidos
 	var selected: Array = []
-	var last_type := ""
-	var combat_count := 0
-	for entry: Dictionary in shuffled:
-		if selected.size() >= ROOMS_PER_ZONE:
-			break
-		var t: String = entry["type"]
-		if t == last_type and t in ["museum", "rest"]:
-			continue
-		selected.append(entry)
-		last_type = t
-		if t == "combat":
-			combat_count += 1
-	if selected.size() < ROOMS_PER_ZONE:
-		for entry: Dictionary in shuffled:
-			if selected.size() >= ROOMS_PER_ZONE:
+	var si: int = 0  # índice en specials
+	var ci: int = 0  # índice en combats
+	var last_was_special: bool = false
+
+	while selected.size() < ROOMS_PER_ZONE:
+		if last_was_special or si >= specials.size():
+			# Forzar combat
+			if ci < combats.size():
+				selected.append(combats[ci])
+				ci += 1
+				last_was_special = false
+			elif si < specials.size():
+				# No quedan combats, añadir special (último recurso)
+				selected.append(specials[si])
+				si += 1
+				last_was_special = true
+			else:
 				break
-			if entry not in selected:
-				selected.append(entry)
-	if combat_count < 2:
+		else:
+			# Podemos poner combat o special — alternar para variedad
+			# Preferir special si llevamos 2+ combats seguidos, sino combat
+			var recent_combats: int = 0
+			for k in range(selected.size() - 1, max(selected.size() - 3, -1), -1):
+				if selected[k]["type"] == "combat":
+					recent_combats += 1
+				else:
+					break
+			if recent_combats >= 1 and si < specials.size():
+				selected.append(specials[si])
+				si += 1
+				last_was_special = true
+			elif ci < combats.size():
+				selected.append(combats[ci])
+				ci += 1
+				last_was_special = false
+			elif si < specials.size():
+				selected.append(specials[si])
+				si += 1
+				last_was_special = true
+			else:
+				break
+
+	# Garantizar mínimo 2 combates
+	var combat_count: int = selected.filter(func(e): return e["type"] == "combat").size()
+	if combat_count < 2 and combats.size() >= 2:
+		# Reemplazar últimas specials por combats hasta tener 2
 		for i in range(selected.size() - 1, -1, -1):
 			if combat_count >= 2:
 				break
-			if selected[i]["type"] != "combat":
-				for entry: Dictionary in shuffled:
-					if entry["type"] == "combat" and entry not in selected:
-						selected[i] = entry
-						combat_count += 1
-						break
+			if selected[i]["type"] != "combat" and ci < combats.size():
+				selected[i] = combats[ci]
+				ci += 1
+				combat_count += 1
+
 	return selected
 
 

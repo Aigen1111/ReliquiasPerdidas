@@ -104,10 +104,12 @@ func _refresh_pedestal_labels() -> void:
 		name_lbl.text = _relic_data.get("name", _relic_id)
 	if status_lbl:
 		if is_known:
-			status_lbl.text     = "★ Poder aumentado"
-			status_lbl.modulate = Color(1.0, 0.8, 0.1)
+			# Ya descubierta — mostrar qué hace
+			status_lbl.text     = _relic_data.get("effect", "")
+			status_lbl.modulate = Color(1.0, 0.85, 0.1)
 		else:
-			status_lbl.text     = "✦ Desconocida"
+			# Primera vez — mantener el misterio
+			status_lbl.text     = "✦ Reliquia desconocida"
 			status_lbl.modulate = Color(0.75, 0.75, 1.0)
 
 
@@ -134,6 +136,57 @@ func _collect_relic() -> void:
 		else:
 			status_lbl.text     = "Poder activado (+25%)"
 			status_lbl.modulate = Color(1.0, 0.85, 0.2)
+
+	_show_relic_notification(is_new)
+
+
+func _show_relic_notification(is_new: bool) -> void:
+	var player := _get_player()
+	if player == null:
+		return
+
+	var panel := ColorRect.new()
+	panel.color          = Color(0.05, 0.05, 0.1, 0.88)
+	panel.size           = Vector2(230, 80)
+	panel.global_position = player.global_position + Vector2(-115, -150)
+	add_child(panel)
+
+	var title := Label.new()
+	title.text                  = "✦ Reliquia descubierta" if is_new else "★ Reliquia conocida"
+	title.modulate              = Color(0.4, 1.0, 0.5) if is_new else Color(1.0, 0.85, 0.2)
+	title.horizontal_alignment  = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode         = TextServer.AUTOWRAP_OFF
+	title.clip_text             = true
+	title.size                  = Vector2(230, 20)
+	title.position              = Vector2(0, 6)
+	title.add_theme_font_size_override("font_size", 12)
+	panel.add_child(title)
+
+	var name_lbl := Label.new()
+	name_lbl.text                 = _relic_data.get("name", _relic_id)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.autowrap_mode        = TextServer.AUTOWRAP_OFF
+	name_lbl.clip_text            = true
+	name_lbl.size                 = Vector2(230, 20)
+	name_lbl.position             = Vector2(0, 28)
+	name_lbl.add_theme_font_size_override("font_size", 13)
+	panel.add_child(name_lbl)
+
+	var effect_lbl := Label.new()
+	effect_lbl.text                 = _relic_data.get("effect", "")
+	effect_lbl.modulate             = Color(0.75, 0.75, 0.75)
+	effect_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	effect_lbl.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
+	effect_lbl.size                 = Vector2(220, 36)
+	effect_lbl.position             = Vector2(5, 48)
+	effect_lbl.add_theme_font_size_override("font_size", 11)
+	panel.add_child(effect_lbl)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(panel, "position:y", panel.position.y - 30, 3.0)
+	tween.tween_property(panel, "modulate:a", 0.0, 3.0).set_delay(1.5)
+	tween.chain().tween_callback(panel.queue_free)
 
 
 func _on_pedestal_entered(body: Node) -> void:

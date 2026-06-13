@@ -39,6 +39,7 @@ func _pick_two_options() -> Array:
 	var remaining_idx: int    = RunManager.current_room_index + 1
 	var current_scene: String = sequence[RunManager.current_room_index] if RunManager.current_room_index < sequence.size() else ""
 	var current_type:  String = _type_from_scene(current_scene)
+	var streak:        int    = RunManager.non_combat_streak()
 
 	# Solo queda el boss
 	if remaining_idx >= sequence.size() - 1:
@@ -48,11 +49,29 @@ func _pick_two_options() -> Array:
 			{ "type": "boss", "scene": boss },
 		]
 
-	# Opción A: siguiente en secuencia, nunca del mismo tipo que la sala actual
+	# Si el jugador lleva 2+ salas seguidas sin combate, ambos portales son combate
+	if streak >= 2:
+		var cs: String = _find_combat_scene(sequence, remaining_idx)
+		return [
+			{ "type": "combat", "scene": cs },
+			{ "type": "combat", "scene": cs },
+		]
+
+	# Si lleva 1 sala sin combate, al menos una opción es combate
+	if streak == 1:
+		var cs:     String = _find_combat_scene(sequence, remaining_idx)
+		var other:  String = _get_scene_of_different_type(sequence, remaining_idx, "combat")
+		var tother: String = _type_from_scene(other)
+		return [
+			{ "type": "combat", "scene": cs },
+			{ "type": tother,   "scene": other },
+		]
+
+	# Flujo normal: opción A diferente a la sala actual
 	var scene_a: String = _get_scene_of_different_type(sequence, remaining_idx, current_type)
 	var type_a:  String = _type_from_scene(scene_a)
 
-	# Opción B: diferente de A y diferente de la sala actual
+	# Opción B: diferente de A y de la sala actual
 	var scene_b: String = ""
 	var type_b:  String = ""
 	for i in range(remaining_idx, min(remaining_idx + 8, sequence.size())):
@@ -62,7 +81,6 @@ func _pick_two_options() -> Array:
 			type_b  = t
 			break
 
-	# Fallback: alternar entre tipos disponibles
 	if scene_b.is_empty():
 		var pool: Array = ["combat", "rest", "reward"]
 		pool.erase(type_a)
@@ -77,6 +95,12 @@ func _pick_two_options() -> Array:
 		{ "type": type_b, "scene": scene_b },
 	]
 
+
+func _find_combat_scene(sequence: Array, from_idx: int) -> String:
+	for i in range(from_idx, sequence.size()):
+		if _type_from_scene(sequence[i]) == "combat":
+			return sequence[i]
+	return _get_alternate_scene("combat")["scene"]
 
 # Devuelve la primera escena en sequence desde start_idx que NO sea del tipo excluido.
 # Si no encuentra ninguna, devuelve un fallback generado.

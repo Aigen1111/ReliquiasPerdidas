@@ -25,10 +25,19 @@ var _pool:            Array = []
 func _ready() -> void:
 	_setup_portal_base()
 
+	# Recoger posiciones de placeholders — buscar tanto en hijos directos
+	# como en el grupo "Enemy" que estén dentro de esta escena
 	for child in get_children():
-		if child.is_in_group("Enemy"):
+		if child.is_in_group("Enemy") or (child.get_script() and str(child.get_script().resource_path).contains("enemy")):
 			_spawn_positions.append(child.global_position)
 			child.queue_free()
+
+	# Fallback: si no encontró hijos Enemy, buscar por nombre (Enemy, Enemy2, etc.)
+	if _spawn_positions.is_empty():
+		for child in get_children():
+			if child.name.begins_with("Enemy") and child is Node2D:
+				_spawn_positions.append(child.global_position)
+				child.queue_free()
 
 	_zone = clamp(RunManager.current_zone_index, 0, WAVE_CONFIG.size() - 1)
 	_pool = ENEMY_POOLS[_zone]
