@@ -88,6 +88,7 @@ func _start_dash() -> void:
 	dash_time_left     = dash_duration
 	dash_cooldown_left = dash_cooldown
 	_dash_charges_left -= 1
+	_spawn_afterimages()
 
 
 func _update_sprite_direction() -> void:
@@ -104,6 +105,9 @@ func _update_animation() -> void:
 
 func _ready() -> void:
 	add_to_group("player")
+	# La barra de vida del RunHUD reemplaza la del player — ocultarla
+	if health_bar:
+		health_bar.hide()
 	_apply_relic_bonuses()
 
 	if RunManager.is_in_run:
@@ -152,6 +156,33 @@ func _apply_relic_bonuses() -> void:
 	_effective_max_health = roundf(_effective_max_health)
 	max_health            = _effective_max_health
 	_dash_charges_left    = _dash_charges
+
+
+func _spawn_afterimages() -> void:
+	# Crear 4 afterimages del sprite actual que se desvanecen rápidamente
+	const IMAGE_COUNT:    int   = 4
+	const IMAGE_INTERVAL: float = 0.03
+	const FADE_TIME:      float = 0.18
+
+	for i in range(IMAGE_COUNT):
+		await get_tree().create_timer(IMAGE_INTERVAL * i).timeout
+		if not is_inside_tree():
+			return
+
+		var ghost := Sprite2D.new()
+		ghost.texture        = animated_sprite_2d.sprite_frames.get_frame_texture(
+			animated_sprite_2d.animation, animated_sprite_2d.frame)
+		ghost.flip_h         = animated_sprite_2d.flip_h
+		ghost.scale          = animated_sprite_2d.scale
+		ghost.global_position = global_position
+		ghost.modulate       = Color(0.4, 0.7, 1.0, 0.7)  # azul fantasma
+		ghost.z_index        = z_index - 1
+		get_parent().add_child(ghost)
+
+		# Desvanecer y eliminar
+		var tween := ghost.create_tween()
+		tween.tween_property(ghost, "modulate:a", 0.0, FADE_TIME)
+		tween.tween_callback(ghost.queue_free)
 
 
 func heal(amount: int) -> void:

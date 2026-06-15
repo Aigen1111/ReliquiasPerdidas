@@ -43,85 +43,57 @@ func _pick_two_options() -> Array:
 
 	# Solo queda el boss
 	if remaining_idx >= sequence.size() - 1:
-		var boss: String = sequence[sequence.size() - 1] if sequence.size() > 0 else ""
+		var boss: String = sequence.back() if sequence.size() > 0 else ""
 		return [
 			{ "type": "boss", "scene": boss },
 			{ "type": "boss", "scene": boss },
 		]
 
-	# Si el jugador lleva 2+ salas seguidas sin combate, ambos portales son combate
+	# Reglas de balanceo por streak
+	var type_a: String
+	var type_b: String
+
 	if streak >= 2:
-		var cs: String = _find_combat_scene(sequence, remaining_idx)
-		return [
-			{ "type": "combat", "scene": cs },
-			{ "type": "combat", "scene": cs },
-		]
-
-	# Si lleva 1 sala sin combate, al menos una opción es combate
-	if streak == 1:
-		var cs:     String = _find_combat_scene(sequence, remaining_idx)
-		var other:  String = _get_scene_of_different_type(sequence, remaining_idx, "combat")
-		var tother: String = _type_from_scene(other)
-		return [
-			{ "type": "combat", "scene": cs },
-			{ "type": tother,   "scene": other },
-		]
-
-	# Flujo normal: opción A diferente a la sala actual
-	var scene_a: String = _get_scene_of_different_type(sequence, remaining_idx, current_type)
-	var type_a:  String = _type_from_scene(scene_a)
-
-	# Opción B: diferente de A y de la sala actual
-	var scene_b: String = ""
-	var type_b:  String = ""
-	for i in range(remaining_idx, min(remaining_idx + 8, sequence.size())):
-		var t: String = _type_from_scene(sequence[i])
-		if t != type_a and t != current_type and t != "boss":
-			scene_b = sequence[i]
-			type_b  = t
-			break
-
-	if scene_b.is_empty():
-		var pool: Array = ["combat", "rest", "reward"]
-		pool.erase(type_a)
-		pool.erase(current_type)
-		if pool.is_empty():
-			pool = ["combat"]
-		type_b  = pool[randi() % pool.size()]
-		scene_b = _get_alternate_scene(type_b)["scene"]
+		# Forzar combate en ambos portales
+		type_a = "combat"
+		type_b = "combat"
+	elif streak == 1:
+		# Al menos uno es combate
+		type_a = "combat"
+		type_b = _pick_different_from(["combat", current_type])
+	else:
+		# Variedad normal — ninguno igual a la sala actual
+		var options: Array = ["combat", "rest", "reward"]
+		options.erase(current_type)
+		options.shuffle()
+		type_a = options[0]
+		type_b = options[1] if options.size() > 1 else ("combat" if type_a != "combat" else "rest")
 
 	return [
-		{ "type": type_a, "scene": scene_a },
-		{ "type": type_b, "scene": scene_b },
+		{ "type": type_a, "scene": _get_alternate_scene(type_a)["scene"] },
+		{ "type": type_b, "scene": _get_alternate_scene(type_b)["scene"] },
 	]
 
 
-func _find_combat_scene(sequence: Array, from_idx: int) -> String:
-	for i in range(from_idx, sequence.size()):
-		if _type_from_scene(sequence[i]) == "combat":
-			return sequence[i]
-	return _get_alternate_scene("combat")["scene"]
+func _pick_different_from(exclude: Array) -> String:
+	var pool: Array = ["combat", "rest", "reward"]
+	for e in exclude:
+		pool.erase(e)
+	if pool.is_empty():
+		return "combat"
+	return pool[randi() % pool.size()]
 
 # Devuelve la primera escena en sequence desde start_idx que NO sea del tipo excluido.
 # Si no encuentra ninguna, devuelve un fallback generado.
-func _get_scene_of_different_type(sequence: Array, start_idx: int, exclude_type: String) -> String:
-	for i in range(start_idx, sequence.size()):
-		var t: String = _type_from_scene(sequence[i])
-		if t != exclude_type and t != "boss":
-			return sequence[i]
-	# Fallback: elegir tipo distinto del excluido
-	var options: Array = ["combat", "rest", "reward"]
-	options.erase(exclude_type)
-	return _get_alternate_scene(options[randi() % options.size()])["scene"]
-
-
 func _get_alternate_scene(prefer_type: String) -> Dictionary:
 	var zone: int = clamp(RunManager.current_zone_index, 0, 2)
 	var prefix: String = "Z%d" % (zone + 1)
+	var variants: Array = ["A", "B", "C", "D"]
+	var v: String = variants[randi() % variants.size()]
 	var type_map: Dictionary = {
-		"combat": "res://Rooms/Bribri/%s_Combat_A.tscn" % prefix,
-		"rest":   "res://Rooms/Bribri/%s_Rest_A.tscn"   % prefix,
-		"reward": "res://Rooms/Bribri/%s_Reward_A.tscn" % prefix,
+		"combat": "res://Rooms/Bribri/%s_Combat_%s.tscn" % [prefix, v],
+		"rest":   "res://Rooms/Bribri/%s_Rest_A.tscn"    % prefix,
+		"reward": "res://Rooms/Bribri/%s_Reward_A.tscn"  % prefix,
 	}
 	return { "type": prefer_type, "scene": type_map.get(prefer_type, type_map["combat"]) }
 

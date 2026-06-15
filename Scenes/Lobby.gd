@@ -1,51 +1,62 @@
-# Lobby.gd  (versión walkable — reemplaza la versión anterior con botón)
-# ─────────────────────────────────────────────────────────────────────────────
-# El lobby es una sala normal que el jugador puede explorar. La UI es solo
-# un overlay mínimo. La interacción con el portal y los pedestales se maneja
-# en sus propios scripts.
-#
-# ESTRUCTURA DE ESCENA (Lobby.tscn):
-#   Lobby (Node2D)  ← este script
-#   ├── TileMapLayer            (piso/paredes del lobby, placeholder por ahora)
-#   ├── Player (player.tscn)    (instancia del jugador, posicionado al centro)
-#   ├── Portal (Portal.tscn)    (a la derecha de la sala — inicia el run)
-#   ├── RelicPedestals (Node2D) (hijos: RelicPedestal.tscn ×N, ver abajo)
-#   └── HUD (CanvasLayer)
-#       └── RelicsLabel (Label) (esquina sup. izq.)
-# ─────────────────────────────────────────────────────────────────────────────
+# Lobby.gd
 extends Node2D
 
+const PEDESTAL_SCRIPT  := "res://Scenes/RelicPedestal.gd"
+const MAX_SLOTS:    int = 1   # empieza con 1, se puede expandir mejorando el museo
+
+# Posición del primer pedestal y separación entre slots
+const PEDESTAL_ORIGIN:  Vector2 = Vector2(0, 80)
+const PEDESTAL_SPACING: float   = 200.0
 
 @onready var relics_label: Label = $HUD/RelicsLabel
 
 
 func _ready() -> void:
-	# Desactivar arma en el lobby
-	var player := $Player
-	var gun := player.get_node_or_null("Gun")
-	if gun:
-		gun.process_mode = Node.PROCESS_MODE_DISABLED
+	var player := get_node_or_null("Player")
+	if player:
+		var gun := player.get_node_or_null("Gun")
+		if gun:
+			gun.process_mode = Node.PROCESS_MODE_DISABLED
+
+	_populate_pedestals()
 	_update_hud()
-	_populate_relic_pedestals()
+
+	# Limpiar active_relics a solo MAX_SLOTS entradas al volver al lobby
+	if RunManager.active_relics.size() > MAX_SLOTS:
+		RunManager.active_relics.resize(MAX_SLOTS)
 
 
 func _update_hud() -> void:
-	var count: int = RunManager.unlocked_relics.size()
-	relics_label.text = "Reliquias: %d" % count
+	var total:    int = RunManager.unlocked_relics.size()
+	var equipped: int = 0
+	for r in RunManager.active_relics:
+		if r != "":
+			equipped += 1
+
+	var lines: Array = []
+	lines.append("Reliquias descubiertas: %d / %d" % [total, MuseumData.get_all_relic_ids().size()])
+	lines.append("Slots equipados: %d / %d" % [equipped, MAX_SLOTS])
+
 	if RunManager.last_run_floor > 0:
-		var result := "Victoria ✓" if RunManager.last_run_victory else "Derrota ✗"
-		relics_label.text += "\nÚltimo run: %s (piso %d)" % [result, RunManager.last_run_floor]
+		var result: String = "Victoria ✓" if RunManager.last_run_victory else "Derrota ✗"
+		lines.append("Último run: %s (sala %d)" % [result, RunManager.last_run_floor])
+
+	relics_label.text = "\n".join(lines)
 
 
-func _populate_relic_pedestals() -> void:
-	if not has_node("RelicPedestals"):
+func _populate_pedestals() -> void:
+	var container := get_node_or_null("RelicPedestals")
+	if container == null:
 		return
-	var pedestals := $RelicPedestals.get_children()
-	for i: int in range(pedestals.size()):
-		var pedestal := pedestals[i]
-		if not pedestal.has_method("setup"):
-			continue
-		if i < RunManager.unlocked_relics.size():
-			pedestal.setup(RunManager.unlocked_relics[i])
-		else:
-			pedestal.setup("")
+
+	for child in container.get_children():
+		child.queue_free()
+
+	var script: Script = load(PEDESTAL_SCRIPT)
+
+	for i in range(MAX_SLOTS):
+		var pedestal := Node2D.new()
+		pedestal.set_script(script)
+		pedestal.position = PEDESTAL_ORIGIN + Vector2(i * PEDESTAL_SPACING, 0)
+		container.add_child(pedestal)
+		pedestal.call_deferred("setup", i)

@@ -31,7 +31,10 @@ func _process(delta: float) -> void:
 
 func _setup_pedestal() -> void:
 	var all_ids: Array = MuseumData.get_all_relic_ids()
-	_relic_id   = all_ids[randi() % all_ids.size()]
+	# Priorizar reliquias que no están activas en este run para evitar repetición
+	var preferred: Array = all_ids.filter(func(id): return id not in RunManager.active_relics)
+	var pool: Array = preferred if not preferred.is_empty() else all_ids
+	_relic_id   = pool[randi() % pool.size()]
 	_relic_data = MuseumData.get_relic(_relic_id)
 
 	_pedestal_node = get_node_or_null("Pedestal")
@@ -118,8 +121,7 @@ func _collect_relic() -> void:
 	var is_new: bool = _relic_id not in RunManager.unlocked_relics
 	if is_new:
 		RunManager.unlock_relic(_relic_id)
-	if _relic_id not in RunManager.active_relics:
-		RunManager.active_relics.append(_relic_id)
+	# NO se activa automáticamente — el jugador la equipa desde el lobby
 
 	var visual:     ColorRect = _pedestal_node.get_node_or_null("Visual")     if _pedestal_node else null
 	var status_lbl: Label     = _pedestal_node.get_node_or_null("StatusLabel") if _pedestal_node else null
@@ -134,8 +136,10 @@ func _collect_relic() -> void:
 			status_lbl.text     = "¡Reliquia descubierta!"
 			status_lbl.modulate = Color(0.3, 1.0, 0.4)
 		else:
-			status_lbl.text     = "Poder activado (+25%)"
-			status_lbl.modulate = Color(1.0, 0.85, 0.2)
+			status_lbl.text     = "Ya descubierta"
+			status_lbl.modulate = Color(0.7, 0.7, 0.7)
+
+	_show_relic_notification(is_new)
 
 	_show_relic_notification(is_new)
 
