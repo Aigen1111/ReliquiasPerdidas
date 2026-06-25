@@ -15,7 +15,13 @@ func _ready() -> void:
 	for child in get_children():
 		if child.is_in_group("Enemy"):
 			child.queue_free()
+	if not is_instance_valid(self) or get_tree() == null:
+		return
 	await get_tree().process_frame
+	if not is_instance_valid(self) or get_tree() == null:
+		return
+	if not is_instance_valid(self):
+		return
 	_setup_pedestal()
 	_open_portals()
 

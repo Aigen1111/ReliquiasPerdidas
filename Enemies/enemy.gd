@@ -79,5 +79,9 @@ func _die() -> void:
 		RunManager.add_run_gold(gold_drop)
 	animated_sprite.play("Dead")
 	collision_shape.set_deferred("disabled", true)
+	if not is_instance_valid(self) or get_tree() == null:
+		return
 	await get_tree().create_timer(death_delay).timeout
+	if not is_instance_valid(self) or get_tree() == null:
+		return
 	queue_free()

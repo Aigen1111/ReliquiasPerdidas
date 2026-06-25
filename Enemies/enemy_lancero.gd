@@ -68,10 +68,17 @@ func _behavior(delta: float) -> void:
 				_enter_cooldown()
 
 		State.COOLDOWN:
-			velocity = to_player.normalized() * (speed * 0.5)
+			# Alejarse del jugador durante el cooldown antes de poder cargar de nuevo
+			var flee_speed: float = speed * 0.8
+			if dist > 200.0:
+				# Ya está lejos — detenerse y esperar
+				velocity = Vector2.ZERO
+			else:
+				velocity = -to_player.normalized() * flee_speed
 			_update_animation(velocity)
+			animated_sprite.modulate = Color.WHITE
 			if state_timer <= 0.0:
-				state = State.CHASE
+				state       = State.CHASE
 				state_timer = 0.0
 
 

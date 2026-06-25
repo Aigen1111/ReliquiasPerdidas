@@ -12,6 +12,8 @@ extends CanvasLayer
 var _gun:    Node = null
 var _player: Node = null
 var _dash_icons: Array = []
+var _inventory_panel: Node = null
+var _pause_menu: Node = null
 
 
 func _ready() -> void:
@@ -19,6 +21,33 @@ func _ready() -> void:
 	_on_gold_changed(RunManager.get_display_gold())
 	reload_label.hide()
 	call_deferred("_connect_player")
+	call_deferred("_setup_overlay_panels")
+
+
+func _setup_overlay_panels() -> void:
+	# ── InventoryPanel (Tab, sin pausar) ──
+	var inv_layer := CanvasLayer.new()
+	inv_layer.layer = 10
+	inv_layer.name  = "InventoryLayer"
+	add_child(inv_layer)
+
+	var inv_panel := preload("res://Scenes/InventoryPanel.gd").new()
+	inv_panel.name = "InventoryPanel"
+	inv_layer.add_child(inv_panel)
+	_inventory_panel = inv_panel
+
+	# ── PauseMenu (Escape, pausa el árbol) ──
+	var pause_layer := CanvasLayer.new()
+	pause_layer.layer = 11
+	pause_layer.name  = "PauseLayer"
+	add_child(pause_layer)
+
+	var pause_menu := preload("res://Scenes/PauseMenu.gd").new()
+	pause_menu.name = "PauseMenu"
+	pause_menu.process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_layer.add_child(pause_menu)
+	pause_menu.setup(_inventory_panel)
+	_pause_menu = pause_menu
 
 
 func _connect_player() -> void:

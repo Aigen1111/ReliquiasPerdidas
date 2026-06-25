@@ -32,6 +32,9 @@ var _dash_charges:         int   = 1   # cuántos dashes disponibles
 var _dash_charges_left:    int   = 1
 var _dash_recharge_timer:  float = 0.0
 
+# Popup flotante sobre el jugador
+var _popup_label: Label = null
+
 
 func _process(_delta: float) -> void:
 	rotation = 0.0
@@ -108,6 +111,7 @@ func _ready() -> void:
 	# La barra de vida del RunHUD reemplaza la del player — ocultarla
 	if health_bar:
 		health_bar.hide()
+	_build_popup_label()
 	_apply_relic_bonuses()
 
 	if RunManager.is_in_run:
@@ -120,6 +124,44 @@ func _ready() -> void:
 
 	if cursor_texture != null:
 		Input.set_custom_mouse_cursor(cursor_texture, Input.CURSOR_ARROW, Vector2(16, 16))
+
+
+## Crea el Label flotante que sube sobre el jugador (invisible por defecto).
+func _build_popup_label() -> void:
+	_popup_label = Label.new()
+	_popup_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_popup_label.add_theme_font_size_override("font_size", 13)
+	_popup_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.3))
+	_popup_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	_popup_label.add_theme_constant_override("outline_size", 4)
+	# El player tiene scale(5,5) — compensar para que el texto sea legible
+	_popup_label.scale    = Vector2(0.2, 0.2)
+	# size en espacio local del Label. En pantalla: 150*0.2=30px ancho, 24*0.2≈5px alto
+	_popup_label.size     = Vector2(150, 24)
+	# position en espacio del PADRE (player), donde 1 unidad = 5px en pantalla.
+	# Barra de recarga está en y=-10. Popup va en y=-13 (3 unidades = 15px más arriba).
+	# Para centrar: label mide 30px pantalla = 6 unidades padre → x = -3
+	_popup_label.position = Vector2(-3, -13)
+	_popup_label.z_index  = 10
+	_popup_label.visible  = false
+	add_child(_popup_label)
+
+
+## Muestra un texto flotante encima del jugador que sube y desaparece.
+func show_popup(text: String, color: Color = Color(1.0, 0.95, 0.3)) -> void:
+	if _popup_label == null:
+		return
+	_popup_label.text         = text
+	_popup_label.modulate     = color
+	_popup_label.modulate.a   = 1.0
+	_popup_label.position     = Vector2(-3, -13)
+	_popup_label.visible      = true
+
+	var tween := create_tween()
+	# Sube 4 unidades padre = 20px en pantalla durante 1.2s (más visible)
+	tween.tween_property(_popup_label, "position:y", -17.0, 1.2)
+	tween.parallel().tween_property(_popup_label, "modulate:a", 0.0, 1.2)
+	tween.tween_callback(func(): _popup_label.visible = false)
 
 
 ## Lee las reliquias activas y modifica los stats del jugador en consecuencia.
@@ -165,7 +207,11 @@ func _spawn_afterimages() -> void:
 	const FADE_TIME:      float = 0.18
 
 	for i in range(IMAGE_COUNT):
+		if not is_instance_valid(self) or get_tree() == null:
+			return
 		await get_tree().create_timer(IMAGE_INTERVAL * i).timeout
+		if not is_instance_valid(self) or get_tree() == null:
+			return
 		if not is_inside_tree():
 			return
 
@@ -203,7 +249,11 @@ func add_material(type, amount: int) -> void:
 func _die() -> void:
 	is_dead = true
 	# ... animación de muerte ...
+	if not is_instance_valid(self) or get_tree() == null:
+		return
 	await get_tree().create_timer(1.5).timeout
+	if not is_instance_valid(self) or get_tree() == null:
+		return
 	RunManager.player_died()   # ← Esta es la línea clave
 	
 	
@@ -212,6 +262,7 @@ func take_damage(amount: float) -> void:
 		return
 	# Piedra Tsuru: esquivar con probabilidad
 	if _dodge_chance > 0.0 and randf() < _dodge_chance:
+		show_popup("ESQUIVAR", Color(0.4, 1.0, 0.6))
 		return
 	current_health = maxf(current_health - amount, 0.0)
 	RunManager.player_current_health = current_health

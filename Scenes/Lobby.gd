@@ -2,28 +2,172 @@
 extends Node2D
 
 const PEDESTAL_SCRIPT  := "res://Scenes/RelicPedestal.gd"
-const MAX_SLOTS:    int = 1   # empieza con 1, se puede expandir mejorando el museo
+const MAX_SLOTS:    int = 1
 
-# Posición del primer pedestal y separación entre slots
 const PEDESTAL_ORIGIN:  Vector2 = Vector2(0, 80)
 const PEDESTAL_SPACING: float   = 200.0
 
+# Colores del menú (mismo estilo que PauseMenu)
+const PANEL_COLOR  := Color(0.04, 0.04, 0.09, 0.94)
+const HEADER_COLOR := Color(0.85, 0.75, 0.3)
+const BTN_NORMAL   := Color(0.15, 0.15, 0.25)
+const BTN_HOVER    := Color(0.28, 0.25, 0.45)
+
 @onready var relics_label: Label = $HUD/RelicsLabel
+
+var _lobby_menu: Control = null
+var _menu_open: bool = false
 
 
 func _ready() -> void:
-	var player := get_node_or_null("Player")
-	if player:
-		var gun := player.get_node_or_null("Gun")
-		if gun:
-			gun.process_mode = Node.PROCESS_MODE_DISABLED
-
+	call_deferred("_disable_gun")
 	_populate_pedestals()
 	_update_hud()
+	call_deferred("_build_lobby_menu")
 
-	# Limpiar active_relics a solo MAX_SLOTS entradas al volver al lobby
 	if RunManager.active_relics.size() > MAX_SLOTS:
-		RunManager.active_relics.resize(MAX_SLOTS)
+		RunManager.active_relics = RunManager.active_relics.slice(0, MAX_SLOTS)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if _menu_open:
+			_close_lobby_menu()
+		else:
+			_open_lobby_menu()
+		get_viewport().set_input_as_handled()
+
+
+# ── Menú del Lobby ────────────────────────────────────────────────────────
+
+func _build_lobby_menu() -> void:
+	# CanvasLayer para que quede sobre todo
+	var layer := CanvasLayer.new()
+	layer.layer = 10
+	add_child(layer)
+
+	_lobby_menu = Control.new()
+	_lobby_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_lobby_menu.mouse_filter = Control.MOUSE_FILTER_STOP
+	_lobby_menu.visible = false
+	layer.add_child(_lobby_menu)
+
+	# Fondo oscuro
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.6)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lobby_menu.add_child(bg)
+
+	# Panel
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(280, 0)
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_COLOR
+	style.border_color = Color(0.5, 0.4, 0.2)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.content_margin_left   = 28
+	style.content_margin_right  = 28
+	style.content_margin_top    = 24
+	style.content_margin_bottom = 24
+	panel.add_theme_stylebox_override("panel", style)
+	_lobby_menu.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 14)
+	panel.add_child(vbox)
+
+	# Título
+	var title := Label.new()
+	title.text = "MENÚ"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", HEADER_COLOR)
+	vbox.add_child(title)
+
+	var sep := ColorRect.new()
+	sep.color = Color(0.35, 0.3, 0.2)
+	sep.custom_minimum_size = Vector2(0, 1)
+	vbox.add_child(sep)
+
+	_add_menu_button(vbox, "← Volver",              _close_lobby_menu)
+	_add_menu_button(vbox, "🏠  Menú Principal",    _go_to_main_menu)
+	_add_menu_button(vbox, "✕  Salir del juego",    _quit_game)
+
+	# Centrar el panel tras un frame
+	if not is_instance_valid(self) or get_tree() == null:
+		return
+	await get_tree().process_frame
+	if not is_instance_valid(self) or get_tree() == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	panel.position = Vector2(
+		(vp.x - panel.size.x) * 0.5,
+		(vp.y - panel.size.y) * 0.5
+	)
+
+
+func _add_menu_button(parent: Control, text: String, callback: Callable) -> void:
+	var btn := Button.new()
+	btn.text = text
+	btn.add_theme_font_size_override("font_size", 14)
+	btn.custom_minimum_size = Vector2(0, 44)
+	btn.focus_mode = Control.FOCUS_NONE
+
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = BTN_NORMAL
+	normal.set_corner_radius_all(6)
+	normal.content_margin_left  = 12
+	normal.content_margin_right = 12
+
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = BTN_HOVER
+	hover.set_corner_radius_all(6)
+	hover.content_margin_left  = 12
+	hover.content_margin_right = 12
+
+	btn.add_theme_stylebox_override("normal",  normal)
+	btn.add_theme_stylebox_override("hover",   hover)
+	btn.add_theme_stylebox_override("pressed", hover)
+	btn.add_theme_color_override("font_color", Color(1, 1, 1))
+	btn.pressed.connect(callback)
+	parent.add_child(btn)
+
+
+func _open_lobby_menu() -> void:
+	if _lobby_menu == null:
+		return
+	_menu_open = true
+	_lobby_menu.visible = true
+
+
+func _close_lobby_menu() -> void:
+	_menu_open = false
+	if _lobby_menu:
+		_lobby_menu.visible = false
+
+
+func _go_to_main_menu() -> void:
+	# TODO: implementar cuando exista el menú principal
+	_close_lobby_menu()
+
+
+func _quit_game() -> void:
+	get_tree().quit()
+
+
+func _disable_gun() -> void:
+	var player := get_node_or_null("Player")
+	if player == null:
+		return
+	var gun := player.get_node_or_null("Gun")
+	if gun:
+		gun.process_mode = Node.PROCESS_MODE_DISABLED
+		if gun.has_method("_cancel_reload"):
+			gun._cancel_reload()
 
 
 func _update_hud() -> void:

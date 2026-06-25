@@ -82,6 +82,7 @@ var room_type_history: Array = []  # tipos de sala visitados en orden
 var gold_this_run: int = 0
 var player_current_health: float = 100.0
 var player_max_health: float = 100.0
+var player_max_health_before_relic: float = 100.0  # vida máxima ANTES de aplicar reliquias en sala
 var relics_found_this_run: Array = []
 
 # ── API run ───────────────────────────────────────────────────────────────
@@ -94,8 +95,14 @@ func start_run(area_id: String = "bribri") -> void:
 	current_zone_index = 0
 	current_room_index = 0
 	gold_this_run = 0
-	player_current_health = player_max_health
+	# Reliquias activas en el run = solo las equipadas desde el Lobby.
+	# Se limpian aquí para que cada run empiece desde cero
+	# (las del Lobby se re-añaden vía set_active_relics antes de start_run).
+	active_relics = active_relics.filter(func(id): return id in unlocked_relics and id not in relics_found_this_run)
 	relics_found_this_run = []
+	player_current_health = 100.0   # se recalcula en player._ready() tras aplicar reliquias
+	player_max_health = 100.0
+	player_max_health_before_relic = 100.0
 	room_type_history = []
 	run_sequence = _build_run_sequence(area_id)
 	emit_signal("run_started", area_id)
@@ -196,6 +203,12 @@ func unlock_relic(relic_id: String) -> void:
 		unlocked_relics.append(relic_id)
 		relics_found_this_run.append(relic_id)
 		emit_signal("relic_unlocked", relic_id)
+	# Si estamos en un run, activar la reliquia automáticamente
+	if is_in_run and relic_id not in active_relics:
+		# Guardar vida máxima ANTES de aplicar la nueva reliquia
+		# para que player._ready() pueda escalar la vida actual correctamente
+		player_max_health_before_relic = player_max_health
+		active_relics.append(relic_id)
 
 
 func set_active_relics(relic_ids: Array) -> void:

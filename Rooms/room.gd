@@ -20,19 +20,18 @@ var _wave_sizes:      Array = []
 var _current_wave:    int   = 0
 var _zone:            int   = 0
 var _pool:            Array = []
+# Índice de posición de spawn — se cicla con módulo para reusar posiciones
+var _spawn_pos_idx:   int   = 0
 
 
 func _ready() -> void:
 	_setup_portal_base()
 
-	# Recoger posiciones de placeholders — buscar tanto en hijos directos
-	# como en el grupo "Enemy" que estén dentro de esta escena
 	for child in get_children():
 		if child.is_in_group("Enemy") or (child.get_script() and str(child.get_script().resource_path).contains("enemy")):
 			_spawn_positions.append(child.global_position)
 			child.queue_free()
 
-	# Fallback: si no encontró hijos Enemy, buscar por nombre (Enemy, Enemy2, etc.)
 	if _spawn_positions.is_empty():
 		for child in get_children():
 			if child.name.begins_with("Enemy") and child is Node2D:
@@ -47,35 +46,43 @@ func _ready() -> void:
 		_open_portals()
 		return
 
+	if not is_inside_tree():
+		return
 	await get_tree().process_frame
+	if not is_inside_tree():
+		return
 	_show_wave_indicators()
 
 
 func _calculate_waves() -> Array:
 	var cfg: Dictionary = WAVE_CONFIG[_zone]
-	var total: int = min(randi_range(cfg["min"], cfg["max"]), _spawn_positions.size())
+	# Ya no limitamos por _spawn_positions.size() — las posiciones se reusan con módulo
+	var total: int = randi_range(cfg["min"], cfg["max"])
 	var sizes: Array = []
 	var assigned: int = 0
 	for i in range(cfg["waves"].size()):
-		var count: int = total - assigned if i == cfg["waves"].size() - 1 else max(1, int(total * cfg["waves"][i]))
+		var count: int = total - assigned if i == cfg["waves"].size() - 1 \
+			else max(1, int(total * cfg["waves"][i]))
 		sizes.append(count)
 		assigned += count
 	return sizes
 
 
 func _show_wave_indicators() -> void:
-	var start_idx: int = 0
-	for i in range(_current_wave):
-		start_idx += _wave_sizes[i]
-
 	var count: int = _wave_sizes[_current_wave] if _current_wave < _wave_sizes.size() else 0
 	var indicators: Array = []
 
+	# Barajar posiciones cada oleada para variar el orden
+	var shuffled: Array = _spawn_positions.duplicate()
+	shuffled.shuffle()
+
 	for i in range(count):
-		var pos_idx: int = start_idx + i
-		if pos_idx >= _spawn_positions.size():
-			break
-		var ind := _build_spawn_indicator(_spawn_positions[pos_idx])
+		var base_pos: Vector2 = shuffled[i % shuffled.size()]
+		# Si hay más enemigos que posiciones, agregar offset para no superponerse
+		var offset: Vector2 = Vector2.ZERO
+		if i >= shuffled.size():
+			offset = Vector2(randf_range(-40, 40), randf_range(-40, 40))
+		var ind := _build_spawn_indicator(base_pos + offset)
 		add_child(ind)
 		indicators.append(ind)
 
@@ -107,9 +114,14 @@ func _build_spawn_indicator(world_pos: Vector2) -> Node2D:
 func _animate_indicators(indicators: Array) -> void:
 	var elapsed: float = 0.0
 	while elapsed < SPAWN_WARN_DURATION:
+		# is_inside_tree() verifica que el nodo esté en el árbol Y que get_tree() no sea null
+		if not is_inside_tree():
+			return
 		await get_tree().process_frame
+		if not is_inside_tree():
+			return
 		elapsed += get_process_delta_time()
-		var remaining: int  = max(1, int(ceil(SPAWN_WARN_DURATION - elapsed)))
+		var remaining: int   = max(1, int(ceil(SPAWN_WARN_DURATION - elapsed)))
 		var pulse:     float = 0.5 + 0.5 * sin(elapsed * TAU * 2.0)
 		for ind in indicators:
 			if not is_instance_valid(ind):
@@ -125,19 +137,22 @@ func _animate_indicators(indicators: Array) -> void:
 func _spawn_wave() -> void:
 	if _current_wave >= _wave_sizes.size():
 		return
-	var start_idx: int = 0
-	for i in range(_current_wave):
-		start_idx += _wave_sizes[i]
-	for i in range(_wave_sizes[_current_wave]):
-		var pos_idx: int = start_idx + i
-		if pos_idx >= _spawn_positions.size():
-			break
+	var count: int = _wave_sizes[_current_wave]
+
+	var shuffled: Array = _spawn_positions.duplicate()
+	shuffled.shuffle()
+
+	for i in range(count):
+		var base_pos: Vector2 = shuffled[i % shuffled.size()]
+		var offset: Vector2 = Vector2.ZERO
+		if i >= shuffled.size():
+			offset = Vector2(randf_range(-40, 40), randf_range(-40, 40))
 		var scene: PackedScene = load(_pool[randi() % _pool.size()])
 		if scene == null:
 			continue
 		var enemy = scene.instantiate()
 		add_child(enemy)
-		enemy.global_position = _spawn_positions[pos_idx]
+		enemy.global_position = base_pos + offset
 		enemy.died.connect(_on_enemy_died)
 		enemies_alive += 1
 	_current_wave += 1
@@ -148,7 +163,11 @@ func _on_enemy_died() -> void:
 	if enemies_alive > 0:
 		return
 	if _current_wave < _wave_sizes.size():
-		await get_tree().create_timer(WAVE_DELAY).timeout
+		if not is_inside_tree():
+			return
+		await get_tree().create_timer(WAVE_DELAY, false).timeout
+		if not is_inside_tree():
+			return
 		_show_wave_indicators()
 	else:
 		_open_portals()

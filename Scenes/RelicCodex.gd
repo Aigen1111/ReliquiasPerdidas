@@ -4,9 +4,6 @@
 #   LOBBY    → abre desde un pedestal, permite seleccionar reliquia para equipar
 #   RUN      → abre desde pausa (Escape), solo lectura, muestra reliquias activas
 #              con conteo de duplicados (x2, x3...)
-#
-# SETUP: instanciar como hijo de un CanvasLayer en Lobby.tscn Y en Room.tscn
-# (o añadirlo dinámicamente). Llamar open_lobby(slot_idx) u open_run().
 # ─────────────────────────────────────────────────────────────────────────────
 extends CanvasLayer
 
@@ -38,6 +35,7 @@ var _confirm_btn:   Button
 
 
 func _ready() -> void:
+	add_to_group("relic_codex")
 	_all_ids = MuseumData.get_all_relic_ids()
 	_build_ui()
 	hide()

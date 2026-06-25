@@ -26,6 +26,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if process_mode == Node.PROCESS_MODE_DISABLED:
+		return
+
 	var aim_direction := get_global_mouse_position() - global_position
 	if aim_direction != Vector2.ZERO:
 		look_at(global_position + aim_direction)
@@ -38,7 +41,6 @@ func _process(delta: float) -> void:
 			_finish_reload()
 		return
 
-	# R para recarga manual — detectar presión, no hold continuo
 	if Input.is_key_pressed(KEY_R):
 		if not _reload_key_held and not _reloading and _current_ammo < magazine_size:
 			_start_reload()
@@ -101,32 +103,48 @@ func _finish_reload() -> void:
 	emit_signal("ammo_changed", _current_ammo, magazine_size)
 
 
+func _cancel_reload() -> void:
+	_reloading       = false
+	_reload_progress = 0.0
+	if is_instance_valid(_reload_bar):
+		_reload_bar.hide()
+
+
 func _build_reload_bar() -> void:
 	var player := get_parent()
 	if player == null:
 		return
-	var bar := ProgressBar.new()
-	bar.name            = "ReloadBar"
-	bar.min_value       = 0.0
-	bar.max_value       = 1.0
-	bar.value           = 0.0
-	bar.size            = Vector2(36, 5)
-	bar.position        = Vector2(-18, -48)
-	bar.show_percentage = false
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(1.0, 0.85, 0.1)
-	bar.add_theme_stylebox_override("fill", fill)
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.2, 0.2, 0.2, 0.8)
-	bar.add_theme_stylebox_override("background", bg)
-	bar.hide()
-	player.add_child(bar)
-	_reload_bar = bar
+
+	# Usar Node2D + ColorRect en vez de ProgressBar para evitar problemas de layout
+	var container := Node2D.new()
+	container.name     = "ReloadBar"
+	# Con scale x5 del player, -8 local = -40px en pantalla, justo encima del sprite
+	container.position = Vector2(-4, -4)
+
+	var bg := ColorRect.new()
+	bg.color    = Color(0.15, 0.15, 0.15, 0.85)
+	bg.size     = Vector2(8, 1)
+	bg.position = Vector2.ZERO
+	container.add_child(bg)
+
+	var fill := ColorRect.new()
+	fill.name     = "Fill"
+	fill.color    = Color(1.0, 0.85, 0.1)
+	fill.size     = Vector2(0, 1)
+	fill.position = Vector2.ZERO
+	container.add_child(fill)
+
+	container.hide()
+	player.add_child(container)
+	_reload_bar = container
 
 
 func _update_reload_bar(progress: float) -> void:
-	if is_instance_valid(_reload_bar):
-		_reload_bar.value = progress
+	if not is_instance_valid(_reload_bar):
+		return
+	var fill: ColorRect = _reload_bar.get_node_or_null("Fill")
+	if fill:
+		fill.size.x = 8.0 * clampf(progress, 0.0, 1.0)
 
 
 func _play_shot_sound() -> void:

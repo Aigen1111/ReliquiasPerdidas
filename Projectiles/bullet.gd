@@ -60,6 +60,10 @@ func setup(travel_direction: Vector2, shooter: PhysicsBody2D = null, bullet_team
 
 
 func _start_lifetime_timer() -> void:
+	if not is_instance_valid(self) or get_tree() == null:
+		return
 	await get_tree().create_timer(lifetime).timeout
+	if not is_instance_valid(self) or get_tree() == null:
+		return
 	if is_inside_tree():
 		queue_free()
