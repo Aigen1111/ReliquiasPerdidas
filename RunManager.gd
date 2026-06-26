@@ -98,7 +98,7 @@ func start_run(area_id: String = "bribri") -> void:
 	# Reliquias activas en el run = solo las equipadas desde el Lobby.
 	# Se limpian aquí para que cada run empiece desde cero
 	# (las del Lobby se re-añaden vía set_active_relics antes de start_run).
-	active_relics = active_relics.filter(func(id): return id in unlocked_relics and id not in relics_found_this_run)
+	active_relics = active_relics.filter(func(id): return id in unlocked_relics)
 	relics_found_this_run = []
 	player_current_health = 100.0   # se recalcula en player._ready() tras aplicar reliquias
 	player_max_health = 100.0

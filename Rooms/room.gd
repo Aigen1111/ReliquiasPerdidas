@@ -16,6 +16,7 @@ const WAVE_DELAY:          float = 1.0
 
 var enemies_alive:    int   = 0
 var _spawn_positions: Array = []
+var _pending_spawn_positions: Array[Vector2] = []
 var _wave_sizes:      Array = []
 var _current_wave:    int   = 0
 var _zone:            int   = 0
@@ -70,19 +71,30 @@ func _calculate_waves() -> Array:
 
 func _show_wave_indicators() -> void:
 	var count: int = _wave_sizes[_current_wave] if _current_wave < _wave_sizes.size() else 0
-	var indicators: Array = []
 
-	# Barajar posiciones cada oleada para variar el orden
+	# Calcular posiciones finales UNA vez — se reusan en _spawn_wave
 	var shuffled: Array = _spawn_positions.duplicate()
 	shuffled.shuffle()
-
+	var final_positions: Array[Vector2] = []
+	var used: Dictionary = {}
 	for i in range(count):
 		var base_pos: Vector2 = shuffled[i % shuffled.size()]
-		# Si hay más enemigos que posiciones, agregar offset para no superponerse
+		var key: String = str(base_pos)
+		var times: int = used.get(key, 0)
 		var offset: Vector2 = Vector2.ZERO
-		if i >= shuffled.size():
-			offset = Vector2(randf_range(-40, 40), randf_range(-40, 40))
-		var ind := _build_spawn_indicator(base_pos + offset)
+		if times > 0:
+			# Distribuir en círculo alrededor del punto base
+			var angle: float = (TAU / 4.0) * times + randf() * 0.5
+			offset = Vector2(cos(angle), sin(angle)) * 45.0
+		used[key] = times + 1
+		final_positions.append(base_pos + offset)
+
+	# Guardar para que _spawn_wave use exactamente las mismas posiciones
+	_pending_spawn_positions = final_positions
+
+	var indicators: Array = []
+	for pos in final_positions:
+		var ind := _build_spawn_indicator(pos)
 		add_child(ind)
 		indicators.append(ind)
 
@@ -91,6 +103,22 @@ func _show_wave_indicators() -> void:
 		if is_instance_valid(ind):
 			ind.queue_free()
 	_spawn_wave()
+
+
+func _spawn_wave() -> void:
+	if _current_wave >= _wave_sizes.size():
+		return
+	for pos in _pending_spawn_positions:
+		var scene: PackedScene = load(_pool[randi() % _pool.size()])
+		if scene == null:
+			continue
+		var enemy = scene.instantiate()
+		add_child(enemy)
+		enemy.global_position = pos
+		enemy.died.connect(_on_enemy_died)
+		enemies_alive += 1
+	_pending_spawn_positions.clear()
+	_current_wave += 1
 
 
 func _build_spawn_indicator(world_pos: Vector2) -> Node2D:
@@ -134,28 +162,6 @@ func _animate_indicators(indicators: Array) -> void:
 				lbl.text = str(remaining)
 
 
-func _spawn_wave() -> void:
-	if _current_wave >= _wave_sizes.size():
-		return
-	var count: int = _wave_sizes[_current_wave]
-
-	var shuffled: Array = _spawn_positions.duplicate()
-	shuffled.shuffle()
-
-	for i in range(count):
-		var base_pos: Vector2 = shuffled[i % shuffled.size()]
-		var offset: Vector2 = Vector2.ZERO
-		if i >= shuffled.size():
-			offset = Vector2(randf_range(-40, 40), randf_range(-40, 40))
-		var scene: PackedScene = load(_pool[randi() % _pool.size()])
-		if scene == null:
-			continue
-		var enemy = scene.instantiate()
-		add_child(enemy)
-		enemy.global_position = base_pos + offset
-		enemy.died.connect(_on_enemy_died)
-		enemies_alive += 1
-	_current_wave += 1
 
 
 func _on_enemy_died() -> void:

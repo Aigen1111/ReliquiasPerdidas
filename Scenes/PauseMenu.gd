@@ -182,9 +182,8 @@ func _open_codex() -> void:
 
 
 func _exit_to_lobby() -> void:
-	# Despausar ANTES de cambiar de escena para que el árbol esté limpio
 	_is_paused = false
 	get_tree().paused = false
 	visible = false
-	# Usar call_deferred para que el frame actual termine antes del cambio de escena
-	RunManager.go_to_lobby.call_deferred()
+	# Mostrar pantalla de resultado (derrota) en vez de ir directo al lobby
+	RunManager._end_run(false)
