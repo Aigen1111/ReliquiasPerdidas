@@ -71,6 +71,8 @@ var active_relics: Array = []
 var last_run_victory: bool = false
 var last_run_floor: int = 0
 var last_run_gold_earned: int = 0
+var tutorial_done: bool = false
+var tutorial_sibu_revealed: bool = false
 
 # ── Estado del run activo ─────────────────────────────────────────────────
 var is_in_run: bool = false
@@ -98,7 +100,7 @@ func start_run(area_id: String = "bribri") -> void:
 	# Reliquias activas en el run = solo las equipadas desde el Lobby.
 	# Se limpian aquí para que cada run empiece desde cero
 	# (las del Lobby se re-añaden vía set_active_relics antes de start_run).
-	active_relics = active_relics.filter(func(id): return id in unlocked_relics)
+	active_relics = active_relics.filter(func(id): return id in unlocked_relics and id not in relics_found_this_run)
 	relics_found_this_run = []
 	player_current_health = 100.0   # se recalcula en player._ready() tras aplicar reliquias
 	player_max_health = 100.0
