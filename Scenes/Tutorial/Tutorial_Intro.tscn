@@ -1,3 +1,42 @@
 [gd_scene format=3 uid="uid://buyvmbrcvqt05"]
 
+[ext_resource type="Script" uid="uid://bb86ywexyqk6r" path="res://Scenes/Tutorial/Tutorial_Intro.gd" id="1_5fyyr"]
+[ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="2_y4y12"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_g4v7s"]
+radius = 32.0
+
 [node name="TutorialIntro" type="Node2D" unique_id=629927419]
+script = ExtResource("1_5fyyr")
+next_scene = "res://Scenes/Tutorial/Tutorial_Dash.tscn"
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=516184998]
+
+[node name="Player" parent="." unique_id=591215505 instance=ExtResource("2_y4y12")]
+position = Vector2(598, 616.00006)
+
+[node name="ExitTrigger" type="Area2D" parent="." unique_id=1269927935]
+position = Vector2(594, 106)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitTrigger" unique_id=1692466664]
+position = Vector2(3, 13)
+shape = SubResource("CircleShape2D_g4v7s")
+
+[node name="ColorRect" type="ColorRect" parent="ExitTrigger" unique_id=441729811]
+offset_left = -24.0
+offset_top = -36.0
+offset_right = 24.0
+offset_bottom = 36.0
+offset_transform_position = Vector2(-24, -36)
+metadata/_edit_use_anchors_ = true
+
+[node name="Label" type="Label" parent="ExitTrigger" unique_id=1368401837]
+offset_left = -20.0
+offset_top = -64.0
+offset_right = 28.0
+offset_bottom = -41.0
+offset_transform_position = Vector2(-24, -36)
+text = "\"...\""
+metadata/_edit_use_anchors_ = true

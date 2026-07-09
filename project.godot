@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Camaron2"
-run/main_scene="uid://ceibylg7ki68p"
+run/main_scene="uid://buyvmbrcvqt05"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
