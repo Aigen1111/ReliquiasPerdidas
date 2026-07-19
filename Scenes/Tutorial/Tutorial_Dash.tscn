@@ -1,3 +1,50 @@
 [gd_scene format=3 uid="uid://bfdisyibbj6fk"]
 
+[ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="1_8v3ue"]
+[ext_resource type="Script" uid="uid://48qndutukaxp" path="res://Scenes/Tutorial/Tutorial_Dash.gd" id="1_xsyng"]
+[ext_resource type="Script" uid="uid://cyys06mw83o4f" path="res://Scenes/Tutorial/TutorialHazardEmitter.gd" id="3_wx7xm"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_xsyng"]
+radius = 32.0
+
 [node name="TutorialDash" type="Node2D" unique_id=1825113685]
+script = ExtResource("1_xsyng")
+next_scene = "res://Scenes/Tutorial/Tutorial_Shooting.tscn"
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=23673817]
+
+[node name="Player" parent="." unique_id=591215505 instance=ExtResource("1_8v3ue")]
+position = Vector2(587, 698)
+
+[node name="ExitTrigger" type="Area2D" parent="." unique_id=1578040407]
+position = Vector2(594, 106)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitTrigger" unique_id=1637143113]
+position = Vector2(3, 13)
+shape = SubResource("CircleShape2D_xsyng")
+
+[node name="ColorRect" type="ColorRect" parent="ExitTrigger" unique_id=1651384350]
+offset_left = -24.0
+offset_top = -36.0
+offset_right = 24.0
+offset_bottom = 36.0
+offset_transform_position = Vector2(-24, -36)
+metadata/_edit_use_anchors_ = true
+
+[node name="Label" type="Label" parent="ExitTrigger" unique_id=1645861811]
+offset_left = -20.0
+offset_top = -64.0
+offset_right = 28.0
+offset_bottom = -41.0
+offset_transform_position = Vector2(-24, -36)
+text = "\"...\""
+metadata/_edit_use_anchors_ = true
+
+[node name="HazardEmitter" type="Node2D" parent="." unique_id=1644152172]
+position = Vector2(594, 211)
+script = ExtResource("3_wx7xm")
+fire_direction = Vector2(0, 1)
+
+[node name="Timer" type="Timer" parent="HazardEmitter" unique_id=2110933247]

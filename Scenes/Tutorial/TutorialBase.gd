@@ -1,15 +1,7 @@
 # TutorialBase.gd
 # Script base para todas las zonas del tutorial.
 # Cada zona hereda este script y solo define _get_dialog_lines() y _on_ready().
-#
-# ESTRUCTURA ESPERADA EN CADA ESCENA .tscn:
-#   TutorialZona (Node2D) ← script de la zona (que extends TutorialBase)
-#   ├── Player          ← instancia de player.tscn
-#   ├── TileMapLayer
-#   ├── ExitTrigger     ← Area2D + CollisionShape2D (portal de salida)
-#   │   └── ColorRect   ← visual del portal (opcional, se colorea por código)
-#   └── Enemies/        ← solo en Tutorial_Shooting.tscn
-#       └── Enemy × N
+
 
 extends Node2D
 
@@ -32,6 +24,8 @@ func _ready() -> void:
 
 
 func _setup() -> void:
+	_lock_player_movement(true)
+
 	# Crear DialogBox
 	_dialog = CanvasLayer.new()
 	_dialog.set_script(load("res://Scenes/DialogBox.gd"))
@@ -45,18 +39,16 @@ func _setup() -> void:
 	if exit:
 		exit.body_entered.connect(_on_exit_entered)
 		exit.body_exited.connect(_on_exit_exited)
-		# Portal empieza bloqueado visualmente
 		_set_portal_locked(true)
 
-	# Deshabilitar gun por defecto — las zonas que lo necesiten lo habilitan
 	_set_gun_enabled(false)
 
 	# Iniciar diálogo de entrada si lo hay
 	var lines := _get_intro_lines()
 	if not lines.is_empty():
-		_dialog.show_lines(lines, _on_intro_finished)
+		_dialog.show_lines(lines, _on_intro_finished_wrapper)
 	else:
-		_on_intro_finished()
+		_on_intro_finished_wrapper()
 
 
 # ── Override en subclases ─────────────────────────────────────────────────
@@ -120,6 +112,10 @@ func _go_to_next() -> void:
 	if next_scene.is_empty():
 		push_warning("TutorialBase: next_scene no está definido en esta zona.")
 		return
+	call_deferred("_deferred_change_scene")
+
+
+func _deferred_change_scene() -> void:
 	get_tree().change_scene_to_file(next_scene)
 
 
@@ -139,3 +135,16 @@ func _reveal_sibu() -> void:
 	_sibu_revealed = true
 	RunManager.tutorial_sibu_revealed = true
 	_dialog.reveal_sibu()
+
+
+func _on_intro_finished_wrapper() -> void:
+	_lock_player_movement(false)
+	_on_intro_finished()
+
+
+func _lock_player_movement(locked: bool) -> void:
+	var players := get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return
+	if players[0].has_method("set_movement_locked"):
+		players[0].set_movement_locked(locked)

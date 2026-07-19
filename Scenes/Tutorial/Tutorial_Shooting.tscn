@@ -1,3 +1,65 @@
 [gd_scene format=3 uid="uid://rls3bpfatkr6"]
 
+[ext_resource type="Script" uid="uid://dftolcdlrl01s" path="res://Scenes/Tutorial/Tutorial_Shooting.gd" id="1_jmshm"]
+[ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="2_a5gd2"]
+[ext_resource type="Script" uid="uid://c6j7btj38lllg" path="res://Scenes/Tutorial/TutorialEnemy.gd" id="3_a5gd2"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_booig"]
+radius = 32.0
+
 [node name="TutorialShooting" type="Node2D" unique_id=779316199]
+script = ExtResource("1_jmshm")
+next_scene = "res://Scenes/Tutorial/Tutorial_Relics.tscn"
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=588284925]
+
+[node name="Player" parent="." unique_id=591215505 instance=ExtResource("2_a5gd2")]
+position = Vector2(598, 616.00006)
+
+[node name="ExitTrigger" type="Area2D" parent="." unique_id=200644159]
+position = Vector2(594, 106)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitTrigger" unique_id=1517281325]
+position = Vector2(3, 13)
+shape = SubResource("CircleShape2D_booig")
+
+[node name="ColorRect" type="ColorRect" parent="ExitTrigger" unique_id=1679812407]
+offset_left = -24.0
+offset_top = -36.0
+offset_right = 24.0
+offset_bottom = 36.0
+offset_transform_position = Vector2(-24, -36)
+metadata/_edit_use_anchors_ = true
+
+[node name="Label" type="Label" parent="ExitTrigger" unique_id=804425855]
+offset_left = -20.0
+offset_top = -64.0
+offset_right = 28.0
+offset_bottom = -41.0
+offset_transform_position = Vector2(-24, -36)
+text = "\"...\""
+metadata/_edit_use_anchors_ = true
+
+[node name="Enemies" type="Node2D" parent="." unique_id=1117172171]
+
+[node name="Dummy1" type="CharacterBody2D" parent="Enemies" unique_id=1505758220]
+position = Vector2(430, 305)
+script = ExtResource("3_a5gd2")
+
+[node name="Dummy2" type="CharacterBody2D" parent="Enemies" unique_id=413442419]
+position = Vector2(493, 300)
+script = ExtResource("3_a5gd2")
+
+[node name="Dummy3" type="CharacterBody2D" parent="Enemies" unique_id=367015396]
+position = Vector2(576, 302)
+script = ExtResource("3_a5gd2")
+
+[node name="Dummy4" type="CharacterBody2D" parent="Enemies" unique_id=2020200076]
+position = Vector2(719, 303)
+script = ExtResource("3_a5gd2")
+
+[node name="Dummy5" type="CharacterBody2D" parent="Enemies" unique_id=1946671033]
+position = Vector2(661, 303)
+script = ExtResource("3_a5gd2")

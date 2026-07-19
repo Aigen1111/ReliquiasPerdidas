@@ -6,9 +6,9 @@ var _enemies_alive: int = 0
 
 func _get_intro_lines() -> Array:
 	return [
-		"Hay criaturas corrompidas en esta zona.",
+		"Hay obstaculos en esta zona.",
 		"Click izquierdo para disparar. Tenés 5 balas — R para recargar.",
-		"Eliminalas para continuar.",
+		"Destruyelos para continuar.",
 	]
 
 func _on_intro_finished() -> void:
@@ -28,8 +28,8 @@ func _on_enemy_died() -> void:
 	_enemies_alive -= 1
 	if _enemies_alive <= 0:
 		_dialog.show_lines([
-			"¡Bien hecho! Las criaturas han caído.",
-			"Continuá adelante.",
+			"¡Bien hecho!",
+			"Sigue adelante.",
 		], _on_zone_completed)
 
 func _on_zone_completed() -> void:

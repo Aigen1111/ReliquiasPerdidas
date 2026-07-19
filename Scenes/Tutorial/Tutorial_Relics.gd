@@ -27,11 +27,13 @@ func _on_relic_touched(body: Node) -> void:
 
 	_dialog.show_lines([
 		"La Máscara de Sibö... en tus manos.",
-		"Ahora podés verme como soy. Soy Sibö, guardián de estos mundos.",
-		"Esa máscara te otorga un 20% más de vida máxima.",
-		"Podés equipar reliquias en el museo antes de cada run.",
-		"Usá Tab durante el run para verlas.",
-		"El museo te espera. ¡Adelante!",
+		"Por fin. Ahora podés verme con claridad, y yo a vos.",
+		"Esta máscara es un eco — un fragmento prestado de mi verdadero rostro.",
+		"Los Sula corrompieron el camino que unía mi mundo con el tuyo.",
+		"Por eso solo pude guiarte como una sombra, hasta ahora.",
+		"Cada reliquia que encuentres en tus aventuras es otro fragmento de ese camino roto — un préstamo, no un objeto único.",
+		"Y sé que Talamanca no es el único lugar donde esto ocurre...",
+		"El museo te espera. Andá.",
 	], _on_zone_completed)
 
 func _on_zone_completed() -> void:

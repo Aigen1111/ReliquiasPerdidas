@@ -9,6 +9,7 @@ extends CharacterBody2D
 @export var dash_speed: float = 500.0
 @export var dash_duration: float = 0.10
 @export var dash_cooldown: float = 0.30
+@export var dash_iframe_duration: float = 0.25 
 @export var cursor_texture: Texture2D
 @onready var health_bar: Node2D = $HealthBar
 
@@ -22,6 +23,9 @@ var last_move_direction := Vector2.ZERO
 var dash_direction := Vector2.ZERO
 var dash_time_left := 0.0
 var dash_cooldown_left := 0.0
+var knockback_velocity := Vector2.ZERO
+var knockback_time_left := 0.0
+var movement_locked := false
 var current_health: float
 var is_dead := false
 
@@ -31,6 +35,7 @@ var _dodge_chance:         float = 0.0
 var _dash_charges:         int   = 1   # cuántos dashes disponibles
 var _dash_charges_left:    int   = 1
 var _dash_recharge_timer:  float = 0.0
+var dash_iframe_left := 0.0
 
 # Popup flotante sobre el jugador
 var _popup_label: Label = null
@@ -45,12 +50,18 @@ func _process(_delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if is_dead:
 		return
+	if movement_locked:
+		input_direction = Vector2.ZERO
+		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+		move_and_slide()
+		return
 
 	input_direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_direction != Vector2.ZERO:
 		last_move_direction = input_direction
 
 	dash_cooldown_left = max(dash_cooldown_left - delta, 0.0)
+	dash_iframe_left   = max(dash_iframe_left - delta, 0.0)
 
 	# Recargar cargas de dash cuando el cooldown termina
 	if dash_cooldown_left <= 0.0 and _dash_charges_left < _dash_charges:
@@ -66,6 +77,9 @@ func _physics_process(delta: float) -> void:
 	if dash_time_left > 0.0:
 		dash_time_left = max(dash_time_left - delta, 0.0)
 		velocity = dash_direction * dash_speed
+	elif knockback_time_left > 0.0:
+		knockback_time_left = max(knockback_time_left - delta, 0.0)
+		velocity = knockback_velocity
 	else:
 		var target_velocity := input_direction * move_speed
 		var movement_force := acceleration if input_direction != Vector2.ZERO else friction
@@ -90,6 +104,7 @@ func _start_dash() -> void:
 	dash_direction     = last_move_direction.normalized()
 	dash_time_left     = dash_duration
 	dash_cooldown_left = dash_cooldown
+	dash_iframe_left   = dash_iframe_duration   # ← nueva línea
 	_dash_charges_left -= 1
 	_spawn_afterimages()
 
@@ -124,6 +139,9 @@ func _ready() -> void:
 
 	if cursor_texture != null:
 		Input.set_custom_mouse_cursor(cursor_texture, Input.CURSOR_ARROW, Vector2(16, 16))
+		
+	if not RunManager.relic_activated.is_connected(_on_relic_activated):
+		RunManager.relic_activated.connect(_on_relic_activated)
 
 
 ## Crea el Label flotante que sube sobre el jugador (invisible por defecto).
@@ -163,6 +181,12 @@ func show_popup(text: String, color: Color = Color(1.0, 0.95, 0.3)) -> void:
 	tween.parallel().tween_property(_popup_label, "modulate:a", 0.0, 1.2)
 	tween.tween_callback(func(): _popup_label.visible = false)
 
+func _on_relic_activated(relic_id: String) -> void:
+	var data := MuseumData.get_relic(relic_id)
+	if data.is_empty():
+		return
+	var line: String = data.get("pickup_line", data.get("name", ""))
+	show_popup(line, Color(0.9, 0.78, 0.2))   # dorado — color de Sibö
 
 ## Lee las reliquias activas y modifica los stats del jugador en consecuencia.
 ## Se llama una sola vez en _ready() — los efectos duran toda la sala.
@@ -257,8 +281,21 @@ func _die() -> void:
 	RunManager.player_died()   # ← Esta es la línea clave
 	
 	
+## Empuja al jugador en una dirección sin aplicar daño.
+## Usado por hazards que no dañan (ej. bala del tutorial de dash).
+func apply_knockback(direction: Vector2, force: float, duration: float = 0.15) -> void:
+	if direction == Vector2.ZERO:
+		return
+	knockback_velocity = direction.normalized() * force
+	knockback_time_left = duration
+
+func set_movement_locked(locked: bool) -> void:
+	movement_locked = locked
+
 func take_damage(amount: float) -> void:
 	if is_dead:
+		return
+	if dash_iframe_left > 0.0:
 		return
 	# Piedra Tsuru: esquivar con probabilidad
 	if _dodge_chance > 0.0 and randf() < _dodge_chance:

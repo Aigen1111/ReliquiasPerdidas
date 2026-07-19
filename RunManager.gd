@@ -1,7 +1,5 @@
 # RunManager.gd — Autoload singleton
-# CAMBIOS: _end_run ahora NO cambia de escena automáticamente.
-# Emite run_ended y espera a que RunResultScreen llame a go_to_lobby().
-# Esto permite que la pantalla de resultado se muestre antes del cambio.
+
 extends Node
 
 signal gold_changed(new_amount: int)
@@ -9,6 +7,7 @@ signal relic_unlocked(relic_id: String)
 signal area_unlocked(area_id: String)
 signal run_started(area_id: String)
 signal run_ended(victory: bool, gold_earned: int)
+signal relic_activated(relic_id: String)   # se emite CADA vez que se activa en una run (aunque ya esté desbloqueada)
 
 const LOBBY_SCENE := "res://Scenes/Lobby.tscn"
 const BOSS_SCENES := {
@@ -211,6 +210,7 @@ func unlock_relic(relic_id: String) -> void:
 		# para que player._ready() pueda escalar la vida actual correctamente
 		player_max_health_before_relic = player_max_health
 		active_relics.append(relic_id)
+		emit_signal("relic_activated", relic_id)
 
 
 func set_active_relics(relic_ids: Array) -> void:
