@@ -105,6 +105,7 @@ func _build_ui() -> void:
 	# Botones
 	_add_button(vbox, "▶  Reanudar",      _resume)
 	_add_button(vbox, "📖  Ver Códex",    _open_codex)
+	_add_button(vbox, "💾  Guardar",      _save_game)
 	_add_button(vbox, "🚪  Salir al Lobby", _exit_to_lobby)
 
 	# Centrar tras un frame para que el panel conozca su tamaño real
@@ -179,6 +180,28 @@ func _open_codex() -> void:
 		codex.open_run()
 	else:
 		push_warning("PauseMenu: no se encontró RunHud en la escena.")
+
+func _save_game() -> void:
+	var ok := SaveManager.save_slot(SaveManager.SLOT_MAIN)
+	_show_save_feedback(ok)
+
+
+func _show_save_feedback(ok: bool) -> void:
+	var panel := get_node_or_null("Panel")
+	if panel == null:
+		return
+	var lbl := Label.new()
+	lbl.text = "Partida guardada" if ok else "No se pudo guardar"
+	lbl.modulate = Color(0.4, 1.0, 0.6) if ok else Color(1.0, 0.4, 0.4)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.position = Vector2(0, -26)
+	panel.add_child(lbl)
+
+	var tween := create_tween()
+	tween.tween_interval(1.2)
+	tween.tween_property(lbl, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(lbl.queue_free)
 
 
 func _exit_to_lobby() -> void:

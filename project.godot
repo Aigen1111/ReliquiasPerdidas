@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Camaron2"
-run/main_scene="uid://buyvmbrcvqt05"
+run/main_scene="uid://ids0djattsyk"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 RunManager="*uid://dd3xkelq0tpwb"
 MuseumData="*uid://h43eu7h03ioo"
+SaveManager="*uid://ci6egwvf4i5x7"
 
 [display]
 

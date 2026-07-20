@@ -151,8 +151,8 @@ func _close_lobby_menu() -> void:
 
 
 func _go_to_main_menu() -> void:
-	# TODO: implementar cuando exista el menú principal
 	_close_lobby_menu()
+	get_tree().change_scene_to_file("res://Scenes/MainMenu.tscn")
 
 
 func _quit_game() -> void:

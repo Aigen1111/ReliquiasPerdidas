@@ -107,6 +107,7 @@ func start_run(area_id: String = "bribri") -> void:
 	room_type_history = []
 	run_sequence = _build_run_sequence(area_id)
 	emit_signal("run_started", area_id)
+	SaveManager.save_slot(SaveManager.SLOT_AUTOSAVE_START)
 	_load_current_room()
 
 
@@ -318,6 +319,7 @@ func _load_current_room() -> void:
 
 func _end_run(victory: bool) -> void:
 	is_in_run = false
+	SaveManager.save_slot(SaveManager.SLOT_AUTOSAVE_END)
 	# Solo emitir señal — RunResultScreen escucha y muestra la pantalla.
 	# El cambio a Lobby lo hace go_to_lobby() cuando el jugador presiona Continuar.
 	emit_signal("run_ended", victory, last_run_gold_earned)
