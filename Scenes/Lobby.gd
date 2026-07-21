@@ -25,8 +25,8 @@ func _ready() -> void:
 	_update_hud()
 	call_deferred("_build_lobby_menu")
 
-	if RunManager.active_relics.size() > MAX_SLOTS:
-		RunManager.active_relics = RunManager.active_relics.slice(0, MAX_SLOTS)
+	if RunManager.equipped_relics.size() > MAX_SLOTS:
+		RunManager.equipped_relics = RunManager.equipped_relics.slice(0, MAX_SLOTS)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -94,6 +94,7 @@ func _build_lobby_menu() -> void:
 	vbox.add_child(sep)
 
 	_add_menu_button(vbox, "← Volver",              _close_lobby_menu)
+	_add_menu_button(vbox, "💾  Guardar",           _open_save_picker)
 	_add_menu_button(vbox, "🏠  Menú Principal",    _go_to_main_menu)
 	_add_menu_button(vbox, "✕  Salir del juego",    _quit_game)
 
@@ -204,3 +205,68 @@ func _populate_pedestals() -> void:
 		pedestal.position = PEDESTAL_ORIGIN + Vector2(i * PEDESTAL_SPACING, 0)
 		container.add_child(pedestal)
 		pedestal.call_deferred("setup", i)
+
+func _open_save_picker() -> void:
+	if _lobby_menu == null:
+		return
+	var panel := _lobby_menu.get_node_or_null("Panel")
+	if panel == null:
+		return
+	var vbox := panel.get_child(0) as VBoxContainer
+	for child in vbox.get_children():
+		child.queue_free()
+
+	var title := Label.new()
+	title.text = "GUARDAR EN..."
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_color_override("font_color", HEADER_COLOR)
+	vbox.add_child(title)
+
+	for meta in SaveManager.MANUAL_SLOT_META:
+		var slot_id: String = meta["slot"]
+		var info: Dictionary = SaveManager.get_slot_info(slot_id)
+		var suffix := " (vacío)" if info.is_empty() else " — %s" % _format_unix(int(info.get("saved_at_unix", 0)))
+		_add_menu_button(vbox, "%s%s" % [meta["label"], suffix], func(): _save_to_slot(slot_id))
+
+	_add_menu_button(vbox, "← Volver", _rebuild_lobby_menu_default)
+
+
+func _save_to_slot(slot_name: String) -> void:
+	var ok := SaveManager.save_slot(slot_name)
+	_show_save_feedback(ok)
+	_rebuild_lobby_menu_default()
+
+
+func _rebuild_lobby_menu_default() -> void:
+	if _lobby_menu == null:
+		return
+	var layer := _lobby_menu.get_parent()
+	_lobby_menu.queue_free()
+	call_deferred("_build_lobby_menu")
+
+
+func _show_save_feedback(ok: bool) -> void:
+	if _lobby_menu == null:
+		return
+	var panel := _lobby_menu.get_node_or_null("Panel")
+	if panel == null:
+		return
+	var lbl := Label.new()
+	lbl.text = "Partida guardada" if ok else "No se pudo guardar"
+	lbl.modulate = Color(0.4, 1.0, 0.6) if ok else Color(1.0, 0.4, 0.4)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 12)
+	panel.add_child(lbl)
+
+	var tween := create_tween()
+	tween.tween_interval(1.2)
+	tween.tween_property(lbl, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(lbl.queue_free)
+
+
+func _format_unix(unix_time: int) -> String:
+	if unix_time <= 0:
+		return "sin fecha"
+	var dt := Time.get_datetime_dict_from_unix_time(unix_time)
+	return "%02d/%02d %02d:%02d" % [dt.day, dt.month, dt.hour, dt.minute]

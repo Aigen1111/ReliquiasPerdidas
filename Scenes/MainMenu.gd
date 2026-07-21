@@ -11,13 +11,6 @@ const BTN_DISABLED := Color(0.1, 0.1, 0.12)
 const TUTORIAL_SCENE := "res://Scenes/Tutorial/Tutorial_Intro.tscn"
 const LOBBY_SCENE    := "res://Scenes/Lobby.tscn"
 
-# Strings literales (no referencio SaveManager.SLOT_* acá para evitar
-# problemas de orden de carga entre autoloads en un const).
-const SLOT_META := [
-	{"slot": "main",           "label": "Guardado Manual"},
-	{"slot": "autosave_start", "label": "Autoguardado — Inicio de Run"},
-	{"slot": "autosave_end",   "label": "Autoguardado — Fin de Run"},
-]
 
 var _status_label:   Label         = null
 var _main_menu_box:  VBoxContainer = null
@@ -124,7 +117,8 @@ func _populate_load_menu() -> void:
 		child.queue_free()
 
 	var any_slot := false
-	for meta in SLOT_META:
+	var all_meta: Array = SaveManager.MANUAL_SLOT_META + SaveManager.AUTOSAVE_SLOT_META
+	for meta in all_meta:
 		var info: Dictionary = SaveManager.get_slot_info(meta["slot"])
 		if info.is_empty():
 			continue

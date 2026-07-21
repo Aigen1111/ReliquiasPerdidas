@@ -1,6 +1,6 @@
 # PauseMenu.gd
 # Menú de pausa que se abre con Escape durante el run.
-# Pausa el árbol de escenas. Opciones: Reanudar, Ver Códex, Salir al Lobby.
+# Pausa el árbol de escenas. Opciones: Reanudar, Ver Códex, Guardar, Salir al Lobby.
 
 extends Control
 
@@ -11,15 +11,16 @@ const BTN_HOVER      := Color(0.28, 0.25, 0.45)
 const BTN_TEXT       := Color(1.0, 1.0, 1.0)
 
 var _is_paused: bool = false
-# Referencia al InventoryPanel para cerrarlo si estaba abierto
 var _inventory_panel: Node = null
+var _main_box: VBoxContainer = null
+var _save_box: VBoxContainer = null
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
-	process_mode = Node.PROCESS_MODE_ALWAYS   # corre aunque el árbol esté pausado
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 
 
@@ -30,7 +31,7 @@ func setup(inventory_panel: Node) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not RunManager.is_in_run:
 		return
-	if event.is_action_pressed("ui_cancel"):   # Escape
+	if event.is_action_pressed("ui_cancel"):
 		if _is_paused:
 			_resume()
 		else:
@@ -41,10 +42,9 @@ func _unhandled_input(event: InputEvent) -> void:
 # ── Pausa / Reanuda ───────────────────────────────────────────────────────
 
 func _pause() -> void:
-	# Cerrar inventario si estaba abierto
 	if _inventory_panel and _inventory_panel.has_method("close"):
 		_inventory_panel.close()
-
+	_show_main_box()
 	_is_paused = true
 	get_tree().paused = true
 	visible = true
@@ -61,13 +61,11 @@ func _resume() -> void:
 # ── Construcción de UI ────────────────────────────────────────────────────
 
 func _build_ui() -> void:
-	# Fondo oscuro
 	var bg := ColorRect.new()
 	bg.color = Color(0, 0, 0, 0.6)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
-	# Panel de ancho fijo — se centrará en _center_panel() tras conocer su alto real
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
 	panel.custom_minimum_size = Vector2(280, 0)
@@ -84,31 +82,36 @@ func _build_ui() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	add_child(panel)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 14)
-	panel.add_child(vbox)
+	var root_vbox := VBoxContainer.new()
+	root_vbox.add_theme_constant_override("separation", 14)
+	panel.add_child(root_vbox)
 
-	# Título
 	var title := Label.new()
 	title.text = "PAUSA"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", HEADER_COLOR)
-	vbox.add_child(title)
+	root_vbox.add_child(title)
 
-	# Separador
 	var sep := ColorRect.new()
 	sep.color = Color(0.35, 0.3, 0.2)
 	sep.custom_minimum_size = Vector2(0, 1)
-	vbox.add_child(sep)
+	root_vbox.add_child(sep)
 
-	# Botones
-	_add_button(vbox, "▶  Reanudar",      _resume)
-	_add_button(vbox, "📖  Ver Códex",    _open_codex)
-	_add_button(vbox, "💾  Guardar",      _save_game)
-	_add_button(vbox, "🚪  Salir al Lobby", _exit_to_lobby)
+	_main_box = VBoxContainer.new()
+	_main_box.add_theme_constant_override("separation", 14)
+	root_vbox.add_child(_main_box)
 
-	# Centrar tras un frame para que el panel conozca su tamaño real
+	_save_box = VBoxContainer.new()
+	_save_box.add_theme_constant_override("separation", 10)
+	_save_box.visible = false
+	root_vbox.add_child(_save_box)
+
+	_add_button(_main_box, "▶  Reanudar",        _resume)
+	_add_button(_main_box, "📖  Ver Códex",      _open_codex)
+	_add_button(_main_box, "💾  Guardar",        _open_save_picker)
+	_add_button(_main_box, "🚪  Salir al Lobby", _exit_to_lobby)
+
 	_center_panel.call_deferred()
 
 
@@ -130,7 +133,6 @@ func _add_button(parent: Control, text: String, callback: Callable) -> void:
 	btn.custom_minimum_size = Vector2(0, 44)
 	btn.focus_mode = Control.FOCUS_NONE
 
-	# Estilos
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = BTN_NORMAL
 	normal.set_corner_radius_all(6)
@@ -152,13 +154,65 @@ func _add_button(parent: Control, text: String, callback: Callable) -> void:
 	parent.add_child(btn)
 
 
+# ── Selector de guardado ──────────────────────────────────────────────────
+
+func _open_save_picker() -> void:
+	for child in _save_box.get_children():
+		child.queue_free()
+
+	for meta in SaveManager.MANUAL_SLOT_META:
+		var slot_id: String = meta["slot"]
+		var info: Dictionary = SaveManager.get_slot_info(slot_id)
+		var suffix := " (vacío)" if info.is_empty() else " — %s" % _format_unix(int(info.get("saved_at_unix", 0)))
+		_add_button(_save_box, "%s%s" % [meta["label"], suffix], func(): _save_to_slot(slot_id))
+
+	_add_button(_save_box, "← Volver", _show_main_box)
+
+	_main_box.visible = false
+	_save_box.visible  = true
+
+
+func _show_main_box() -> void:
+	_save_box.visible = false
+	_main_box.visible = true
+
+
+func _save_to_slot(slot_name: String) -> void:
+	var ok := SaveManager.save_slot(slot_name)
+	_show_main_box()
+	_show_save_feedback(ok)
+
+
+func _format_unix(unix_time: int) -> String:
+	if unix_time <= 0:
+		return "sin fecha"
+	var dt := Time.get_datetime_dict_from_unix_time(unix_time)
+	return "%02d/%02d %02d:%02d" % [dt.day, dt.month, dt.hour, dt.minute]
+
+
+func _show_save_feedback(ok: bool) -> void:
+	var panel := get_node_or_null("Panel")
+	if panel == null:
+		return
+	var lbl := Label.new()
+	lbl.text = "Partida guardada" if ok else "No se pudo guardar"
+	lbl.modulate = Color(0.4, 1.0, 0.6) if ok else Color(1.0, 0.4, 0.4)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.position = Vector2(0, -26)
+	panel.add_child(lbl)
+
+	var tween := create_tween()
+	tween.tween_interval(1.2)
+	tween.tween_property(lbl, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(lbl.queue_free)
+
+
 # ── Acciones de botones ───────────────────────────────────────────────────
 
 func _open_codex() -> void:
-	# Primero buscar si ya existe en el árbol por grupo
 	var codex: Node = get_tree().get_first_node_in_group("relic_codex")
 
-	# Si no, crearlo dentro de RunHud (nombre exacto del nodo en Room.tscn)
 	if codex == null:
 		var scene := get_tree().current_scene
 		var run_hud: Node = null
@@ -181,32 +235,9 @@ func _open_codex() -> void:
 	else:
 		push_warning("PauseMenu: no se encontró RunHud en la escena.")
 
-func _save_game() -> void:
-	var ok := SaveManager.save_slot(SaveManager.SLOT_MAIN)
-	_show_save_feedback(ok)
-
-
-func _show_save_feedback(ok: bool) -> void:
-	var panel := get_node_or_null("Panel")
-	if panel == null:
-		return
-	var lbl := Label.new()
-	lbl.text = "Partida guardada" if ok else "No se pudo guardar"
-	lbl.modulate = Color(0.4, 1.0, 0.6) if ok else Color(1.0, 0.4, 0.4)
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.add_theme_font_size_override("font_size", 12)
-	lbl.position = Vector2(0, -26)
-	panel.add_child(lbl)
-
-	var tween := create_tween()
-	tween.tween_interval(1.2)
-	tween.tween_property(lbl, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(lbl.queue_free)
-
 
 func _exit_to_lobby() -> void:
 	_is_paused = false
 	get_tree().paused = false
 	visible = false
-	# Mostrar pantalla de resultado (derrota) en vez de ir directo al lobby
 	RunManager._end_run(false)

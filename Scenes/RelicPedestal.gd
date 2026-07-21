@@ -17,9 +17,8 @@ var _label_prompt:    Label
 
 func setup(idx: int) -> void:
 	slot_idx = idx
-	# Leer la reliquia equipada en este slot desde RunManager
-	if idx < RunManager.active_relics.size():
-		relic_id   = RunManager.active_relics[idx]
+	if idx < RunManager.equipped_relics.size():
+		relic_id   = RunManager.equipped_relics[idx]
 		relic_data = MuseumData.get_relic(relic_id)
 	else:
 		relic_id   = ""
@@ -129,18 +128,14 @@ func _process(_delta: float) -> void:
 
 
 func _on_relic_selected(selected_id: String) -> void:
-	# Solo procesar si este pedestal fue el que abrió el códex
-	# (el códex emite la señal a todos los pedestales conectados)
 	relic_id   = selected_id
 	relic_data = MuseumData.get_relic(selected_id)
 
-	# Actualizar RunManager.active_relics en este slot
-	while RunManager.active_relics.size() <= slot_idx:
-		RunManager.active_relics.append("")
-	RunManager.active_relics[slot_idx] = selected_id
-	# Limpiar entradas vacías al final
-	while not RunManager.active_relics.is_empty() and RunManager.active_relics.back() == "":
-		RunManager.active_relics.pop_back()
+	while RunManager.equipped_relics.size() <= slot_idx:
+		RunManager.equipped_relics.append("")
+	RunManager.equipped_relics[slot_idx] = selected_id
+	while not RunManager.equipped_relics.is_empty() and RunManager.equipped_relics.back() == "":
+		RunManager.equipped_relics.pop_back()
 
 	_refresh_visuals()
 	var lobby := get_tree().current_scene

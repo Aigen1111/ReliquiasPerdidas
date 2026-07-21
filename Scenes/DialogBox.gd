@@ -1,12 +1,5 @@
 # DialogBox.gd
-# Box de diálogo de Sibö con soporte para modo SILUETA y REVELADO.
-#
-# Antes de recoger la máscara: sprite negro, nombre "???"
-# Después de recoger la máscara: sprite dorado, nombre "Sibö"
-#
-# USO:
-#   dialog.reveal_sibu()          # llamar al recoger la máscara
-#   dialog.show_lines([...])      # array de String o {text, silueta=true/false}
+
 
 extends CanvasLayer
 
@@ -156,6 +149,7 @@ func show_lines(lines: Array, on_finish: Callable = Callable()) -> void:
 	_on_finish = on_finish
 	_active    = true
 	visible    = true
+	_set_player_movement_locked(true)
 	_layout()
 	_show_current()
 
@@ -165,6 +159,14 @@ func hide_dialog() -> void:
 	visible  = false
 	_lines   = []
 	_current = 0
+	_set_player_movement_locked(false)
+	
+func _set_player_movement_locked(locked: bool) -> void:
+	var players := get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return
+	if players[0].has_method("set_movement_locked"):
+		players[0].set_movement_locked(locked)
 
 
 # ── Navegación ────────────────────────────────────────────────────────────
