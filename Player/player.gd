@@ -16,6 +16,7 @@ extends CharacterBody2D
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
 @onready var gun: Node = get_node_or_null("Gun")
 
+
 var coins: int = 0
 var materials: Dictionary = {}
 var input_direction := Vector2.ZERO
@@ -28,6 +29,15 @@ var knockback_time_left := 0.0
 var movement_locked := false
 var current_health: float
 var is_dead := false
+enum FacingDir { DOWN, UP, LEFT, RIGHT }
+const DIR_NAMES := {
+	FacingDir.DOWN:  "down",
+	FacingDir.UP:    "up",
+	FacingDir.LEFT:  "left",
+	FacingDir.RIGHT: "right",
+}
+
+var _facing_dir: int = FacingDir.DOWN
 
 # Stats derivados — se calculan en _apply_relic_bonuses()
 var _effective_max_health: float = 0.0
@@ -89,7 +99,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("mouse_left") and gun != null and gun.has_method("shoot"):
+	if event.is_action_pressed("mouse_left") and gun != null and gun.has_method("shoot") and gun.process_mode != Node.PROCESS_MODE_DISABLED:
 		gun.shoot()
 
 
@@ -110,15 +120,42 @@ func _start_dash() -> void:
 
 
 func _update_sprite_direction() -> void:
-	var mouse_pos := get_global_mouse_position()
-	animated_sprite_2d.flip_h = mouse_pos.x < global_position.x
+	# La orientación la manda hacia dónde apunta el mouse, no hacia dónde
+	# caminás — es el mismo criterio que ya tenía el flip_h de antes,
+	# solo que ahora resolvemos las 4 direcciones en vez de solo L/R.
+	var to_mouse := get_global_mouse_position() - global_position
+	if to_mouse.length_squared() < 1.0:
+		return  # mouse prácticamente encima del personaje, no vale la pena recalcular
+	_facing_dir = _direction_from_vector(to_mouse)
+
+
+func _direction_from_vector(v: Vector2) -> int:
+	# Se queda con el eje dominante del vector. En Godot Y+ es hacia abajo.
+	if absf(v.x) > absf(v.y):
+		return FacingDir.RIGHT if v.x > 0.0 else FacingDir.LEFT
+	else:
+		return FacingDir.DOWN if v.y > 0.0 else FacingDir.UP
 
 
 func _update_animation() -> void:
-	if velocity.length_squared() > 25.0:
-		animated_sprite_2d.play("Walk")
+	var frames := animated_sprite_2d.sprite_frames
+	if frames == null:
+		return
+
+	var state := "walk" if velocity.length_squared() > 25.0 else "idle"
+	var dir_name: String = DIR_NAMES[_facing_dir]
+	var anim_name := "%s_%s" % [state, dir_name]
+
+	# Si la hoja no trae left/right dibujados aparte, se prueba  con una
+	# versión "side" espejo
+	if not frames.has_animation(anim_name) and (_facing_dir == FacingDir.LEFT or _facing_dir == FacingDir.RIGHT):
+		anim_name = "%s_side" % state
+		animated_sprite_2d.flip_h = (_facing_dir == FacingDir.LEFT)
 	else:
-		animated_sprite_2d.play("Idle")
+		animated_sprite_2d.flip_h = false
+
+	if frames.has_animation(anim_name):
+		animated_sprite_2d.play(anim_name)
 
 
 func _ready() -> void:

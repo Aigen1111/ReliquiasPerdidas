@@ -78,6 +78,11 @@ func load_slot(slot_name: String) -> bool:
 func slot_exists(slot_name: String) -> bool:
 	return FileAccess.file_exists(_path_for(slot_name))
 
+func delete_slot(slot_name: String) -> bool:
+	var path := _path_for(slot_name)
+	if not FileAccess.file_exists(path):
+		return false
+	return DirAccess.remove_absolute(path) == OK
 
 ## Devuelve {} si el slot no existe o está corrupto.
 func get_slot_info(slot_name: String) -> Dictionary:
