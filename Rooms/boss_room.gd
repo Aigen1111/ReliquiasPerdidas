@@ -10,6 +10,8 @@ extends Node2D
 var boss_alive: bool = true
 
 func _ready() -> void:
+	MapBorder.build(self, MapBorder.find_floor_tilemap(self))
+
 	for child in get_children():
 		if child.is_in_group("Enemy"):
 			child.died.connect(_on_boss_died)

@@ -1,10 +1,5 @@
 # bullet.gd
 # ─────────────────────────────────────────────────────────────────────────────
-# FIX: las balas ya NO dañan al shooter ni a sus aliados.
-# setup() recibe el shooter y lo agrega a las excepciones de colisión.
-# Adicionalmente se agrega un tag "team" para distinguir balas del jugador
-# vs balas de enemigos — ambas usan el mismo script pero con distinto team.
-#
 # team = "player"  → solo daña a nodos del grupo "Enemy"
 # team = "enemy"   → solo daña a nodos del grupo "player"
 # ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +26,12 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var collider := collision.get_collider()
+
+	# Si el que la recibió está dasheando, la atraviesa entero —
+	if collider != null and "dash_iframe_left" in collider and collider.dash_iframe_left > 0.0:
+		move_and_collide(collision.get_remainder())
+		return
+
 	if collider != null and collider.has_method("take_damage"):
 		# Solo dañar al equipo contrario
 		var should_damage: bool = false

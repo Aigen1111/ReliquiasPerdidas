@@ -7,7 +7,7 @@ const MAX_SLOTS:    int = 1
 const PEDESTAL_ORIGIN:  Vector2 = Vector2(0, 80)
 const PEDESTAL_SPACING: float   = 200.0
 
-# Colores del menú (mismo estilo que PauseMenu)
+# Colores del menú
 const PANEL_COLOR  := Color(0.04, 0.04, 0.09, 0.94)
 const HEADER_COLOR := Color(0.85, 0.75, 0.3)
 const BTN_NORMAL   := Color(0.15, 0.15, 0.25)
@@ -179,6 +179,7 @@ func _update_hud() -> void:
 			equipped += 1
 
 	var lines: Array = []
+	lines.append("🪙 Oro: %d" % RunManager.get_display_gold())
 	lines.append("Reliquias descubiertas: %d / %d" % [total, MuseumData.get_all_relic_ids().size()])
 	lines.append("Slots equipados: %d / %d" % [equipped, MAX_SLOTS])
 

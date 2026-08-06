@@ -49,6 +49,8 @@ var dash_iframe_left := 0.0
 
 # Popup flotante sobre el jugador
 var _popup_label: Label = null
+var _relic_dialog: CanvasLayer = null
+var _pending_first_reveal: Dictionary = {}
 
 
 func _process(_delta: float) -> void:
@@ -167,9 +169,13 @@ func _ready() -> void:
 	_apply_relic_bonuses()
 
 	if RunManager.is_in_run:
-		current_health = minf(RunManager.player_current_health, _effective_max_health)
+		if RunManager.player_current_health < 0.0:
+			current_health = _effective_max_health
+		else:
+			current_health = minf(RunManager.player_current_health, _effective_max_health)
 	else:
 		current_health = _effective_max_health
+	RunManager.player_current_health = current_health
 
 	# Sincronizar max_health en RunManager para que rest_room calcule bien
 	RunManager.player_max_health = _effective_max_health
@@ -179,6 +185,8 @@ func _ready() -> void:
 		
 	if not RunManager.relic_activated.is_connected(_on_relic_activated):
 		RunManager.relic_activated.connect(_on_relic_activated)
+	if not RunManager.relic_unlocked.is_connected(_on_relic_unlocked):
+		RunManager.relic_unlocked.connect(_on_relic_unlocked)
 
 
 ## Crea el Label flotante que sube sobre el jugador (invisible por defecto).
@@ -192,11 +200,11 @@ func _build_popup_label() -> void:
 	# El player tiene scale(5,5) — compensar para que el texto sea legible
 	_popup_label.scale    = Vector2(0.2, 0.2)
 	# size en espacio local del Label. En pantalla: 150*0.2=30px ancho, 24*0.2≈5px alto
-	_popup_label.size     = Vector2(150, 24)
+	_popup_label.size     = Vector2(150, 40)
 	# position en espacio del PADRE (player), donde 1 unidad = 5px en pantalla.
 	# Barra de recarga está en y=-10. Popup va en y=-13 (3 unidades = 15px más arriba).
 	# Para centrar: label mide 30px pantalla = 6 unidades padre → x = -3
-	_popup_label.position = Vector2(-3, -13)
+	_popup_label.position = Vector2(-3, -15)
 	_popup_label.z_index  = 10
 	_popup_label.visible  = false
 	add_child(_popup_label)
@@ -209,21 +217,70 @@ func show_popup(text: String, color: Color = Color(1.0, 0.95, 0.3)) -> void:
 	_popup_label.text         = text
 	_popup_label.modulate     = color
 	_popup_label.modulate.a   = 1.0
-	_popup_label.position     = Vector2(-3, -13)
+	_popup_label.position     = Vector2(-3, -15)
 	_popup_label.visible      = true
 
 	var tween := create_tween()
 	# Sube 4 unidades padre = 20px en pantalla durante 1.2s (más visible)
-	tween.tween_property(_popup_label, "position:y", -17.0, 1.2)
+	tween.tween_property(_popup_label, "position:y", -19.0, 1.2)
 	tween.parallel().tween_property(_popup_label, "modulate:a", 0.0, 1.2)
 	tween.tween_callback(func(): _popup_label.visible = false)
 
 func _on_relic_activated(relic_id: String) -> void:
+	# Si esta reliquia se acaba de revelar por primera vez, ese caso lo
+	# maneja _on_relic_unlocked() con el DialogBox completo
+	
+	if _pending_first_reveal.get(relic_id, false):
+		_pending_first_reveal.erase(relic_id)
+		return
+
 	var data := MuseumData.get_relic(relic_id)
 	if data.is_empty():
 		return
 	var line: String = data.get("pickup_line", data.get("name", ""))
-	show_popup(line, Color(0.9, 0.78, 0.2))   # dorado — color de Sibö
+	var effect: String = data.get("effect", "")
+	var full_text: String = line
+	if effect != "":
+		full_text += "\n%s" % effect
+	show_popup(full_text, Color(0.9, 0.78, 0.2))   # dorado — color de Sibö
+
+
+## La primera vez que se descubre un TIPO de reliquia (nunca antes visto),
+
+func _on_relic_unlocked(relic_id: String) -> void:
+	if not RunManager.is_in_run:
+		return   # durante el tutorial u otros contextos fuera de un run, no mostrar el genérico
+
+	_pending_first_reveal[relic_id] = true
+
+	var data := MuseumData.get_relic(relic_id)
+	if data.is_empty():
+		return
+
+	_ensure_relic_dialog()
+
+	var name_text: String   = data.get("name", "")
+	var pickup_line: String = data.get("pickup_line", "")
+	var effect_text: String = data.get("effect", "")
+
+	var lines: Array = ["Una reliquia nueva... %s." % name_text]
+	if pickup_line != "":
+		lines.append(pickup_line)
+	if effect_text != "":
+		lines.append(effect_text)
+
+	_relic_dialog.show_lines(lines)
+
+
+## Crea el DialogBox
+func _ensure_relic_dialog() -> void:
+	if _relic_dialog != null and is_instance_valid(_relic_dialog):
+		return
+	_relic_dialog = CanvasLayer.new()
+	_relic_dialog.set_script(load("res://Scenes/DialogBox.gd"))
+	get_tree().current_scene.add_child(_relic_dialog)
+	if RunManager.tutorial_sibu_revealed:
+		_relic_dialog.reveal_sibu()
 
 ## Lee las reliquias activas y modifica los stats del jugador en consecuencia.
 ## Se llama una sola vez en _ready() — los efectos duran toda la sala.

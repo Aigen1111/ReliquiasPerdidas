@@ -23,6 +23,8 @@ func _setup_portal_base() -> void:
 		_door_base_pos = door.global_position
 		door.hide()
 
+	MapBorder.build(self, MapBorder.find_floor_tilemap(self))
+
 
 # Abre los dos portales. Llamar cuando la sala esté lista para salir.
 func _open_portals() -> void:

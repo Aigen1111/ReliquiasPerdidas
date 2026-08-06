@@ -102,7 +102,7 @@ func start_run(area_id: String = "bribri") -> void:
 	# (las del Lobby se re-añaden vía set_active_relics antes de start_run).
 	active_relics = equipped_relics.duplicate()
 	relics_found_this_run = []
-	player_current_health = 100.0   # se recalcula en player._ready() tras aplicar reliquias
+	player_current_health = -1.0   # se recalcula en player._ready() tras aplicar reliquias
 	player_max_health = 100.0
 	player_max_health_before_relic = 100.0
 	room_type_history = []

@@ -1,7 +1,7 @@
 # gun.gd — Pistola del jugador con sistema de munición
 extends Sprite2D
 
-@export var magazine_size: int   = 5
+@export var magazine_size: int   = 7
 @export var reload_time:   float = 1.5
 @export var bullet_scene:  PackedScene
 @export var bullet_damage: float = 20.0
