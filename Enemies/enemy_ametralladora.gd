@@ -79,3 +79,7 @@ func _shoot(direction: Vector2) -> void:
 	bullet.modulate        = Color(0.2, 1.0, 0.3)
 	if bullet.has_method("setup"):
 		bullet.setup(direction, self, "enemy")
+
+func _init() -> void:
+	mask_id   = "zopilote"
+	weapon_id = "cerbatana"

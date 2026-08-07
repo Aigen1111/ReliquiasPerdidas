@@ -9,6 +9,9 @@ signal died
 ## Oro que suelta este enemigo al morir. Las subclases pueden sobreescribir.
 @export var gold_drop:   int   = 5
 
+@export var mask_id:   String = ""   # "jaguar", "danta", "zopilote", "harpia"
+@export var weapon_id: String = ""   # "lanza", "escudo", "cerbatana", "arco"
+
 # ── Referencias de nodos ──────────────────────────────────────────────────
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var health_bar:      Node2D           = $HealthBar
@@ -24,6 +27,7 @@ func _ready() -> void:
 	current_health = max_health
 	health_bar.update(current_health, max_health)
 	animated_sprite.play("Idle")
+	EnemyLoadout.attach(self, mask_id, weapon_id)
 
 
 func _physics_process(delta: float) -> void:

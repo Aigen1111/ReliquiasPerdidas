@@ -77,3 +77,8 @@ func _fire() -> void:
 			bullet.setup(dir, self, "enemy")
 	state       = State.COOLDOWN
 	state_timer = shoot_cooldown
+
+
+func _init() -> void:
+	mask_id   = "harpia"
+	weapon_id = "arco"

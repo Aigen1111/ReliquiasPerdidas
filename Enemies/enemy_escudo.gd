@@ -64,3 +64,7 @@ func _find_ally_to_protect() -> Node2D:
 			nearest_dist = d
 			nearest = e as Node2D
 	return nearest
+
+func _init() -> void:
+	mask_id   = "danta"
+	weapon_id = "escudo"

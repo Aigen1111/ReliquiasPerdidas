@@ -111,3 +111,7 @@ func _enter_charge(direction: Vector2) -> void:
 func _enter_cooldown() -> void:
 	state       = State.COOLDOWN
 	state_timer = charge_cooldown
+
+func _init() -> void:
+	mask_id   = "jaguar"
+	weapon_id = "lanza"
