@@ -15,6 +15,11 @@ static func build(parent: Node2D, tilemap: TileMapLayer,
 		color: Color = Color(0, 0, 0, 1)) -> void:
 	if tilemap == null:
 		return
+	tilemap.z_index = -20
+	
+	var decor := _find_descendant_named(parent, "TileMapLayer_Decoraciones")
+	if decor is TileMapLayer:
+		decor.z_index = -5   # decoraciones: atrás del player/enemies, adelante del piso
 
 	var r := _resolve_play_area(tilemap)
 	if r.size.x <= 0.0 or r.size.y <= 0.0:

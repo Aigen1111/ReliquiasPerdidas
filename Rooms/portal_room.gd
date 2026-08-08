@@ -24,6 +24,7 @@ func _setup_portal_base() -> void:
 		door.hide()
 
 	MapBorder.build(self, MapBorder.find_floor_tilemap(self))
+	DebugLabel.attach(self)
 
 
 # Abre los dos portales. Llamar cuando la sala esté lista para salir.

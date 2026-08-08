@@ -1,79 +1,82 @@
 # enemy_boss_bribri.gd — Guardián Bribri (Boss)
+# Casco de conquistador español corrupto, inmóvil flota en el centro
+# de la sala y ataca con proyectiles, sin perseguir ni embestir.
 #
 # FASES:
-#   Fase 1 (100% → 50% vida): CHASE + FAN_SHOT + CHARGE
-#   Fase 2 (< 50% vida): todo lo anterior más rápido + SUMMON (invoca Lanceros)
+#   Fase 1 (100% → 50% vida): FAN_SHOT + BARRAGE
+#   Fase 2 (< 50% vida): todo lo anterior más frecuente + SUMMON (invoca Lanceros)
 #     La transición a Fase 2 tiene una pausa de 1.5 s con flash blanco.
 
 extends "res://Enemies/enemy.gd"
 
-# ── Exportados/Variables 
+# ── Exportados/Variables
 @export var bullet_scene:   PackedScene
 @export var lancero_scene:  PackedScene
 
-# Stats base (sobreescriben los del padre)
-@export var phase2_speed_multiplier: float = 1.45
+# Barrage (reemplaza a la carga física — línea de balas telegrafiada)
+@export var barrage_windup:    float = 0.55
+@export var barrage_bullets:   int   = 10
+@export var barrage_interval:  float = 0.06
+@export var barrage_speed:     float = 520.0
+@export var barrage_damage:    float = 14.0
+@export var barrage_cooldown:  float = 3.5
 
-# Carga
-@export var charge_speed:    float = 480.0
-@export var charge_windup:   float = 0.55
-@export var charge_duration: float = 0.38
-@export var charge_cooldown: float = 3.5
-@export var charge_range:    float = 340.0
-@export var charge_damage:   float = 32.0
-@export var contact_damage:  float = 14.0
+@export var contact_damage:  float = 14.0   # si el jugador se pega demasiado
 
 # Abanico
-@export var fan_cooldown:    float = 2.8   # tiempo entre abanicos de balas
-@export var fan_bullets_p1:  int   = 5     # balas en Fase 1
-@export var fan_bullets_p2:  int   = 7     # balas en Fase 2
-@export var fan_spread_deg:  float = 60.0  # ángulo total del abanico
+@export var fan_cooldown:    float = 2.8
+@export var fan_bullets_p1:  int   = 7      # antes 5 — más denso
+@export var fan_bullets_p2:  int   = 10     # antes 7
+@export var fan_spread_deg:  float = 70.0
 @export var fan_speed:       float = 300.0
 @export var fan_damage:      float = 18.0
 
 # Invocación (Fase 2)
 @export var summon_cooldown: float = 8.0
-@export var summon_offset:   float = 120.0  # distancia lateral del spawn
+@export var summon_offset:   float = 120.0
 
 # ── Constantes
-const PHASE2_THRESHOLD: float = 0.5   # % de vida para pasar a Fase 2
-const CONTACT_INTERVAL: float = 0.55  # cooldown entre daños de contacto
-const PHASE_FLASH_TIME: float = 1.5   # pausa dramática al entrar Fase 2
+const PHASE2_THRESHOLD: float = 0.5
+const CONTACT_INTERVAL: float = 0.55
+const PHASE_FLASH_TIME: float = 1.5
 
 # ── Estado interno
-enum State { CHASE, WINDUP, CHARGE, COOLDOWN, FAN_SHOT, SUMMON, PHASE_TRANSITION }
+enum State { IDLE, BARRAGE_WINDUP, BARRAGE, FAN_SHOT, SUMMON, PHASE_TRANSITION }
 
-var state:            State = State.CHASE
-var state_timer:      float = 0.0
-var charge_direction: Vector2 = Vector2.ZERO
-var _contact_cooldown: float = 0.0
-var _fan_timer:        float = 1.0   # primer abanico al segundo de entrar
-var _summon_timer:     float = 4.0   # primera invocación a los 4 s
-var _phase:            int   = 1
-var _phase2_entered:   bool  = false
+var state:              State = State.IDLE
+var state_timer:        float = 0.0
+var _barrage_direction:  Vector2 = Vector2.ZERO
+var _barrage_shots_left: int = 0
+var _barrage_shot_timer: float = 0.0
+var _barrage_timer:     float = 2.0   # primer barrage a los 2s
+var _contact_cooldown:  float = 0.0
+var _fan_timer:         float = 1.0
+var _summon_timer:      float = 4.0
+var _phase:             int   = 1
+var _phase2_entered:    bool  = false
 
 
-# ── Setup 
+# ── Setup
 func _ready() -> void:
 	super._ready()
-	max_health = 350.0
-	speed      = 75.0
+	max_health = 950.0   # estimado — ajustar según cuánto dure la pelea en la práctica
+	speed      = 0.0     # inmóvil
 	gold_drop  = 40
 	current_health = max_health
 	health_bar.update(current_health, max_health)
+	_set_telegraphing(false)
 
 
-# ── Comportamiento principal 
+# ── Comportamiento principal
 func _behavior(delta: float) -> void:
+	velocity = Vector2.ZERO   # nunca se mueve — se sobreescribe explícito por claridad
 	_contact_cooldown = maxf(_contact_cooldown - delta, 0.0)
 
-	# Comprobar transición de fase (solo una vez)
 	if not _phase2_entered and current_health / max_health <= PHASE2_THRESHOLD:
 		_phase2_entered = true
 		_enter_phase_transition()
 		return
 
-	# No actualizar timers secundarios durante transición
 	if state == State.PHASE_TRANSITION:
 		return
 
@@ -81,117 +84,112 @@ func _behavior(delta: float) -> void:
 
 	var player: Node2D = _get_player()
 	if player == null:
-		velocity = Vector2.ZERO
 		return
 
 	var to_player: Vector2 = player.global_position - global_position
 	var dist: float        = to_player.length()
 
-	# Decrementar timers de habilidades pasivas
-	_fan_timer    -= delta
+	_fan_timer     -= delta
+	_barrage_timer -= delta
 	if _phase == 2:
 		_summon_timer -= delta
 
 	match state:
-		State.CHASE:
-			velocity = to_player.normalized() * speed
-			_update_animation(velocity)
-
-			# Daño de contacto en chase
-			if dist < 36.0:
+		State.IDLE:
+			# Daño de contacto si el jugador se pega demasiado
+			if dist < 40.0:
 				_try_contact_damage(player, contact_damage)
 
-			# Prioridad: abanico > invocación > carga
+			# Prioridad: abanico > invocación > barrage
 			if _fan_timer <= 0.0:
 				_enter_fan_shot()
 			elif _phase == 2 and _summon_timer <= 0.0:
 				_enter_summon()
-			elif dist < charge_range and state_timer <= 0.0:
-				_enter_windup()
+			elif _barrage_timer <= 0.0:
+				_enter_barrage_windup()
 
-		State.WINDUP:
-			velocity = Vector2.ZERO
-			# Flash naranja parpadeante (igual que Lancero)
+		State.BARRAGE_WINDUP:
 			if fmod(state_timer, 0.1) < 0.05:
-				animated_sprite.modulate = Color(1.5, 0.55, 0.05)
+				_set_telegraphing(true)
 			else:
-				animated_sprite.modulate = Color.WHITE
+				_set_telegraphing(false)
 			if state_timer <= 0.0:
-				_enter_charge((player.global_position - global_position).normalized())
+				_start_barrage((player.global_position - global_position).normalized())
 
-		State.CHARGE:
-			velocity = charge_direction * charge_speed
-			if dist < 44.0:
-				_try_contact_damage(player, charge_damage)
-			if state_timer <= 0.0:
-				_enter_cooldown()
-
-		State.COOLDOWN:
-			animated_sprite.modulate = Color.WHITE
-			# Huir levemente tras la carga
-			var flee_speed: float = speed * 0.7
-			velocity = Vector2.ZERO if dist > 210.0 else -to_player.normalized() * flee_speed
-			_update_animation(velocity)
-			if state_timer <= 0.0:
-				state       = State.CHASE
-				state_timer = 0.0
+		State.BARRAGE:
+			_barrage_shot_timer -= delta
+			if _barrage_shot_timer <= 0.0 and _barrage_shots_left > 0:
+				_fire_barrage_bullet()
+			if _barrage_shots_left <= 0:
+				_set_telegraphing(false)
+				_barrage_timer = barrage_cooldown
+				state = State.IDLE
 
 		State.FAN_SHOT:
-			velocity = Vector2.ZERO
 			if state_timer <= 0.0:
 				_fire_fan(to_player.normalized())
 
 		State.SUMMON:
-			velocity = Vector2.ZERO
 			if state_timer <= 0.0:
 				_do_summon()
 
 
 # ── Entradas de estado
-func _enter_windup() -> void:
-	state       = State.WINDUP
-	state_timer = charge_windup
-	velocity    = Vector2.ZERO
+func _enter_barrage_windup() -> void:
+	state       = State.BARRAGE_WINDUP
+	state_timer = barrage_windup
 
 
-func _enter_charge(direction: Vector2) -> void:
-	state            = State.CHARGE
-	state_timer      = charge_duration
-	charge_direction = direction
-	animated_sprite.modulate = Color.WHITE
-
-
-func _enter_cooldown() -> void:
-	state       = State.COOLDOWN
-	state_timer = charge_cooldown
+func _start_barrage(direction: Vector2) -> void:
+	state               = State.BARRAGE
+	_barrage_direction  = direction
+	_barrage_shots_left = barrage_bullets
+	_barrage_shot_timer = 0.0
+	_set_telegraphing(true)
 
 
 func _enter_fan_shot() -> void:
 	state       = State.FAN_SHOT
-	state_timer = 0.5   # breve pausa de preparación antes del abanico
+	state_timer = 0.5
 	_fan_timer  = fan_cooldown
-	# Flash azulado como telegrafía del abanico
-	animated_sprite.modulate = Color(0.4, 0.8, 2.0)
+	_set_telegraphing(true)
 
 
 func _enter_summon() -> void:
 	state         = State.SUMMON
-	state_timer   = 0.6   # pausa antes de invocar
+	state_timer   = 0.6
 	_summon_timer = summon_cooldown
-	animated_sprite.modulate = Color(1.8, 0.2, 1.8)   # flash morado
+	_set_telegraphing(true)
 
 
 func _enter_phase_transition() -> void:
 	state = State.PHASE_TRANSITION
-	velocity = Vector2.ZERO
 	_do_phase_transition()
 
 
 # ── Ataques
-func _fire_fan(base_direction: Vector2) -> void:
-	animated_sprite.modulate = Color.WHITE
+func _fire_barrage_bullet() -> void:
 	if bullet_scene == null:
-		state = State.CHASE
+		_barrage_shots_left = 0
+		return
+
+	var bullet = bullet_scene.instantiate()
+	get_parent().add_child(bullet)
+	bullet.global_position = global_position
+	bullet.speed  = barrage_speed
+	bullet.damage = barrage_damage
+	bullet.modulate = Color(2.0, 0.5, 0.2)   # naranja intenso — distinto del abanico
+	if bullet.has_method("setup"):
+		bullet.setup(_barrage_direction, self, "enemy")
+
+	_barrage_shots_left -= 1
+	_barrage_shot_timer  = barrage_interval
+
+
+func _fire_fan(base_direction: Vector2) -> void:
+	_set_telegraphing(false)
+	if bullet_scene == null:
+		state = State.IDLE
 		return
 
 	var bullet_count: int = fan_bullets_p2 if _phase == 2 else fan_bullets_p1
@@ -207,17 +205,17 @@ func _fire_fan(base_direction: Vector2) -> void:
 		bullet.global_position = global_position
 		bullet.speed  = fan_speed
 		bullet.damage = fan_damage
-		bullet.modulate = Color(0.3, 1.8, 0.5)   # verde brillante
+		bullet.modulate = Color(0.3, 1.8, 0.5)   # verde — abanico
 		if bullet.has_method("setup"):
 			bullet.setup(dir, self, "enemy")
 
-	state = State.CHASE
+	state = State.IDLE
 
 
 func _do_summon() -> void:
-	animated_sprite.modulate = Color.WHITE
+	_set_telegraphing(false)
 	if lancero_scene == null:
-		state = State.CHASE
+		state = State.IDLE
 		return
 
 	var player: Node2D = _get_player()
@@ -231,25 +229,22 @@ func _do_summon() -> void:
 		var lancero = lancero_scene.instantiate()
 		get_parent().add_child(lancero)
 		lancero.global_position = global_position + offset
-		# Conectar died al contador de enemigos de room.gd si existe
 		var room = get_parent()
 		if room.has_method("_on_enemy_died"):
 			lancero.died.connect(room._on_enemy_died)
 
-	state = State.CHASE
+	state = State.IDLE
 
 
 # ── Transición a Fase 2
 func _do_phase_transition() -> void:
 	_phase = 2
-	speed *= phase2_speed_multiplier
-	charge_speed  *= 1.2
-	fan_cooldown  *= 0.75   # abanico más frecuente
+	fan_cooldown     *= 0.75
+	barrage_cooldown *= 0.7   # todo más frecuente en vez de "más rápido moviéndose"
 
-	# Flash blanco prolongado + brevísima invulnerabilidad visual
 	var flash_colors: Array = [
-		Color(2.0, 2.0, 2.0),   # blanco
-		Color(1.6, 0.3, 0.1),   # naranja
+		Color(2.0, 2.0, 2.0),
+		Color(1.6, 0.3, 0.1),
 		Color(2.0, 2.0, 2.0),
 		Color(1.6, 0.3, 0.1),
 		Color(2.0, 2.0, 2.0),
@@ -263,11 +258,22 @@ func _do_phase_transition() -> void:
 			return
 
 	animated_sprite.modulate = Color.WHITE
-	state       = State.CHASE
-	state_timer = 0.0
-	_fan_timer  = 1.0
-	# Summon inmediato al entrar en Fase 2
-	_summon_timer = 2.0
+	_set_telegraphing(false)
+	state          = State.IDLE
+	state_timer    = 0.0
+	_fan_timer     = 1.0
+	_barrage_timer = 1.5
+	_summon_timer  = 2.0
+
+
+# ── Visual: 2 sprites (Base/Glow) con fallback a modulate si no existen todavía
+func _set_telegraphing(active: bool) -> void:
+	var anim_name := "Glow" if active else "Base"
+	if animated_sprite.sprite_frames and animated_sprite.sprite_frames.has_animation(anim_name):
+		animated_sprite.play(anim_name)
+		animated_sprite.modulate = Color.WHITE
+	else:
+		animated_sprite.modulate = Color(1.6, 0.6, 0.1) if active else Color.WHITE
 
 
 # ── Helpers

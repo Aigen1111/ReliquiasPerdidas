@@ -27,6 +27,7 @@ func _setup() -> void:
 	_lock_player_movement(true)
 	
 	MapBorder.build(self, MapBorder.find_floor_tilemap(self))
+	DebugLabel.attach(self)
 
 	# Crear DialogBox
 	_dialog = CanvasLayer.new()

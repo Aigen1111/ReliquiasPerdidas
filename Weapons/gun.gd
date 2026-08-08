@@ -1,7 +1,8 @@
 # gun.gd — Pistola del jugador con sistema de munición
 extends Sprite2D
 
-@export var magazine_size: int   = 7
+
+@export var base_magazine_size: int = 7
 @export var reload_time:   float = 1.5
 @export var bullet_scene:  PackedScene
 @export var bullet_damage: float = 20.0
@@ -10,6 +11,7 @@ extends Sprite2D
 @onready var marker_2d:         Marker2D = $Marker2D
 @onready var shot_audio_player: Node     = get_node_or_null("Shoot_sound")
 
+var magazine_size:    int   = 7
 var _current_ammo:    int   = 0
 var _reloading:       bool  = false
 var _reload_progress: float = 0.0
@@ -20,6 +22,7 @@ signal ammo_changed(current: int, max_ammo: int)
 
 
 func _ready() -> void:
+	_recalculate_magazine_size()
 	_current_ammo = magazine_size
 	call_deferred("_build_reload_bar")
 	emit_signal("ammo_changed", _current_ammo, magazine_size)
@@ -154,3 +157,12 @@ func _play_shot_sound() -> void:
 
 func get_ammo_info() -> Dictionary:
 	return { "current": _current_ammo, "max": magazine_size, "reloading": _reloading }
+
+
+func _recalculate_magazine_size() -> void:
+	magazine_size = base_magazine_size
+	# Gancho para una futura reliquia de munición extra, todavía no existe
+	# se suma acá igual que ya hace flecha_awa con el daño en shoot():
+	# if RunManager.has_active_relic("algun_id"):
+	#     var relic: Dictionary = MuseumData.get_relic("algun_id")
+	#     magazine_size += int(relic.get("bonus_value", 0))
