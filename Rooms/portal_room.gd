@@ -3,6 +3,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 extends Node2D
 
+@export var ambient_tint: Color = Color(1, 1, 1, 1)   # blanco = sin tinte, color real
+@export var corruption_light_spots: Array[Vector2] = []
+
 const PORTAL_TYPES: Dictionary = {
 	"combat": { "label": "⚔ Combate",  "color": Color(0.85, 0.2,  0.2,  0.9) },
 	"rest":   { "label": "♥ Descanso", "color": Color(0.2,  0.75, 0.3,  0.9) },
@@ -24,6 +27,12 @@ func _setup_portal_base() -> void:
 		door.hide()
 
 	MapBorder.build(self, MapBorder.find_floor_tilemap(self))
+	if ambient_tint != Color(1, 1, 1, 1):
+		var mod := CanvasModulate.new()
+		mod.color = ambient_tint
+		add_child(mod)
+	for spot in corruption_light_spots:
+		CorruptionLight.spawn(self, spot, ambient_tint)
 	DebugLabel.attach(self)
 
 
