@@ -8,6 +8,7 @@ signal died
 @export var death_delay: float = 1.2
 ## Oro que suelta este enemigo al morir. Las subclases pueden sobreescribir.
 @export var gold_drop:   int   = 5
+@export var hurt_flash_duration: float = 0.35
 
 @export var mask_id:   String = ""   # "jaguar", "danta", "zopilote", "harpia"
 @export var weapon_id: String = ""   # "lanza", "escudo", "cerbatana", "arco"
@@ -17,22 +18,34 @@ signal died
 @onready var health_bar:      Node2D           = $HealthBar
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
+# ── Direcciones (mismo criterio que player.gd: eje dominante del vector) ──
+enum FacingDir { DOWN, UP, LEFT, RIGHT }
+const DIR_NAMES := {
+	FacingDir.DOWN:  "down",
+	FacingDir.UP:    "up",
+	FacingDir.LEFT:  "left",
+	FacingDir.RIGHT: "right",
+}
+var _facing_dir: int = FacingDir.DOWN
+
 # ── Estado interno ─────────────────────────────────────────────────────────
 var current_health: float
 var is_dead: bool = false
+var _hurt_flash_time_left: float = 0.0
 
 
 func _ready() -> void:
 	add_to_group("Enemy")
 	current_health = max_health
 	health_bar.update(current_health, max_health)
-	animated_sprite.play("Idle")
+	animated_sprite.play("idle_down")
 	EnemyLoadout.attach(self, mask_id, weapon_id)
 
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
 		return
+	_hurt_flash_time_left = maxf(_hurt_flash_time_left - delta, 0.0)
 	_behavior(delta)
 	move_and_slide()
 
@@ -43,6 +56,7 @@ func _behavior(_delta: float) -> void:
 	var player := _get_player()
 	if player == null:
 		velocity = Vector2.ZERO
+		_update_animation(Vector2.ZERO)
 		return
 	var dir := (player.global_position - global_position).normalized()
 	velocity = dir * speed
@@ -57,12 +71,35 @@ func _get_player() -> Node2D:
 	return nodes[0] as Node2D
 
 
-func _update_animation(direction: Vector2) -> void:
-	if direction.length() > 0.1:
-		animated_sprite.play("Walk")
-		animated_sprite.flip_h = direction.x < 0
+func _direction_from_vector(v: Vector2) -> int:
+	# Se queda con el eje dominante del vector. En Godot Y+ es hacia abajo.
+	if absf(v.x) > absf(v.y):
+		return FacingDir.RIGHT if v.x > 0.0 else FacingDir.LEFT
 	else:
-		animated_sprite.play("Idle")
+		return FacingDir.DOWN if v.y > 0.0 else FacingDir.UP
+
+
+func _update_animation(direction: Vector2) -> void:
+	if _hurt_flash_time_left > 0.0:
+		return   # se está mostrando el flash de golpe, no lo pises con walk/idle
+
+	var moving := direction.length() > 0.1
+	if moving:
+		_facing_dir = _direction_from_vector(direction)
+
+	var state := "walk" if moving else "idle"
+	var anim_name := "%s_%s" % [state, DIR_NAMES[_facing_dir]]
+	if animated_sprite.sprite_frames and animated_sprite.sprite_frames.has_animation(anim_name):
+		animated_sprite.play(anim_name)
+
+
+func _play_hurt_flash() -> void:
+	if animated_sprite.sprite_frames == null:
+		return
+	var anim_name := "hurt_%s" % DIR_NAMES[_facing_dir]
+	if animated_sprite.sprite_frames.has_animation(anim_name):
+		animated_sprite.play(anim_name)
+		_hurt_flash_time_left = hurt_flash_duration
 
 
 # ── Daño y muerte ──────────────────────────────────────────────────────────
@@ -73,6 +110,8 @@ func take_damage(amount: float) -> void:
 	health_bar.update(current_health, max_health)
 	if current_health <= 0.0:
 		_die()
+	else:
+		_play_hurt_flash()
 
 
 func _die() -> void:

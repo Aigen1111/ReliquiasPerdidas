@@ -12,6 +12,12 @@ extends CharacterBody2D
 var direction := Vector2.ZERO
 var team:       String = "player"   # se sobreescribe en setup()
 
+# Capas de física del proyecto (ver Project Settings > Layer Names > 2D Physics):
+# 1=World, 2=Player, 3=Enemies, 4=Items, 5=Projectiles
+const LAYER_WORLD:   int = 1
+const LAYER_PLAYER:  int = 2
+const LAYER_ENEMIES: int = 4
+
 
 func _ready() -> void:
 	_start_lifetime_timer()
@@ -51,6 +57,15 @@ func setup(travel_direction: Vector2, shooter: PhysicsBody2D = null, bullet_team
 		return
 
 	team = bullet_team
+
+	# La bala solo debe poder detectar físicamente al equipo contrario y al
+	# mundo (paredes/obstáculos). Antes usaba la misma máscara para todas,
+	# lo que hacía que una bala enemiga chocara contra otro enemigo (ej. un
+	# Lancero invocado) y quedara pegada en el borde en vez de atravesarlo.
+	if team == "enemy":
+		collision_mask = LAYER_WORLD | LAYER_PLAYER
+	else:
+		collision_mask = LAYER_WORLD | LAYER_ENEMIES
 
 	# Ignorar colisión física con el shooter para evitar auto-daño
 	if shooter != null:

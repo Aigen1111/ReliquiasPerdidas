@@ -14,7 +14,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("2_trsum")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Dead",
 "speed": 10.0
 }, {
@@ -22,7 +22,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("3_ran4v")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Idle",
 "speed": 10.0
 }, {
@@ -30,7 +30,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("4_qf6nj")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Jump",
 "speed": 10.0
 }, {
@@ -41,7 +41,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("5_77sgk")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Walk",
 "speed": 10.0
 }]
@@ -51,7 +51,7 @@ size = Vector2(17, 8.5)
 
 [node name="EnemyAmetralladora" type="CharacterBody2D" unique_id=2056591160 groups=["Enemy"]]
 collision_layer = 4
-collision_mask = 19
+collision_mask = 3
 script = ExtResource("1_43nn6")
 bullet_scene = ExtResource("2_ran4v")
 

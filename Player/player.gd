@@ -12,6 +12,7 @@ extends CharacterBody2D
 @export var dash_iframe_duration: float = 0.25 
 @export var cursor_texture: Texture2D
 @onready var health_bar: Node2D = $HealthBar
+@export var hurt_flash_duration: float = 0.35
 
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
 @onready var gun: Node = get_node_or_null("Gun")
@@ -46,6 +47,7 @@ var _dash_charges:         int   = 1   # cuántos dashes disponibles
 var _dash_charges_left:    int   = 1
 var _dash_recharge_timer:  float = 0.0
 var dash_iframe_left := 0.0
+var _hurt_flash_time_left: float = 0.0
 
 # Popup flotante sobre el jugador
 var _popup_label: Label = null
@@ -53,7 +55,8 @@ var _relic_dialog: CanvasLayer = null
 var _pending_first_reveal: Dictionary = {}
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_hurt_flash_time_left = maxf(_hurt_flash_time_left - delta, 0.0)
 	rotation = 0.0
 	_update_sprite_direction()
 	_update_animation()
@@ -140,6 +143,9 @@ func _direction_from_vector(v: Vector2) -> int:
 
 
 func _update_animation() -> void:
+	if _hurt_flash_time_left > 0.0:
+		return
+	
 	var frames := animated_sprite_2d.sprite_frames
 	if frames == null:
 		return
@@ -159,6 +165,14 @@ func _update_animation() -> void:
 	if frames.has_animation(anim_name):
 		animated_sprite_2d.play(anim_name)
 
+func _play_hurt_flash() -> void:
+	var frames := animated_sprite_2d.sprite_frames
+	if frames == null:
+		return
+	var anim_name := "hurt_%s" % DIR_NAMES[_facing_dir]
+	if frames.has_animation(anim_name):
+		animated_sprite_2d.play(anim_name)
+		_hurt_flash_time_left = hurt_flash_duration
 
 func _ready() -> void:
 	add_to_group("player")
@@ -399,3 +413,5 @@ func take_damage(amount: float) -> void:
 	RunManager.player_current_health = current_health
 	if current_health <= 0.0:
 		_die()
+	else:
+		_play_hurt_flash()

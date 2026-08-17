@@ -63,6 +63,17 @@ static func _find_first_tilemaplayer(node: Node) -> TileMapLayer:
 	return null
 
 
+## Devuelve el área jugable en el mismo sistema de coordenadas locales que
+## usa build() para levantar las paredes (Rect2 vacío si no hay tilemap de
+## piso). Se usa para no dejar caer spawns fuera del mapa o dentro de un
+## muro — no arma nada, solo calcula.
+static func get_play_area(parent: Node) -> Rect2:
+	var tilemap := find_floor_tilemap(parent)
+	if tilemap == null:
+		return Rect2()
+	return _resolve_play_area(tilemap)
+
+
 static func _resolve_play_area(tilemap: TileMapLayer) -> Rect2:
 	var used := tilemap.get_used_rect()
 	return Rect2(

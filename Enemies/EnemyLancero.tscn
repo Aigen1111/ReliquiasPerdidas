@@ -13,7 +13,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("2_lj3ia")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Dead",
 "speed": 10.0
 }, {
@@ -21,7 +21,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("3_d30ak")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Idle",
 "speed": 10.0
 }, {
@@ -29,7 +29,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("4_2sm3v")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Jump",
 "speed": 10.0
 }, {
@@ -40,7 +40,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("5_ss8ux")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Walk",
 "speed": 10.0
 }]
@@ -50,7 +50,7 @@ size = Vector2(17, 8.5)
 
 [node name="Enemy_Lancero" type="CharacterBody2D" unique_id=2056591160 groups=["Enemy"]]
 collision_layer = 4
-collision_mask = 19
+collision_mask = 3
 script = ExtResource("1_vuxat")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=777700644]

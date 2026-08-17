@@ -8,6 +8,7 @@ signal area_unlocked(area_id: String)
 signal run_started(area_id: String)
 signal run_ended(victory: bool, gold_earned: int)
 signal relic_activated(relic_id: String)   # se emite CADA vez que se activa en una run (aunque ya esté desbloqueada)
+signal museum_upgraded(new_level: int)
 
 const LOBBY_SCENE := "res://Scenes/Lobby.tscn"
 const BOSS_SCENES := {
@@ -62,6 +63,12 @@ const AREA_DATA := {
 
 const AREA_UNLOCK_ORDER := ["bribri"]
 
+# Nivel del museo → cuántos slots de reliquia equipable tiene el jugador.
+# Empieza en 1; MUSEUM_UPGRADE_COSTS[nivel_actual - 1] = costo para subir al
+# siguiente. Con MUSEUM_MAX_LEVEL = 3 el array tiene 2 costos (1→2 y 2→3).
+const MUSEUM_MAX_LEVEL: int = 3
+const MUSEUM_UPGRADE_COSTS: Array = [150, 400]
+
 # ── Estado persistente ────────────────────────────────────────────────────
 var gold: int = 0
 var unlocked_areas: Array = ["bribri"]
@@ -72,6 +79,7 @@ var last_run_floor: int = 0
 var last_run_gold_earned: int = 0
 var tutorial_done: bool = false
 var tutorial_sibu_revealed: bool = false
+var museum_level: int = 1
 
 # ── Estado del run activo ─────────────────────────────────────────────────
 var is_in_run: bool = false
@@ -221,6 +229,31 @@ func set_active_relics(relic_ids: Array) -> void:
 
 func has_active_relic(relic_id: String) -> bool:
 	return relic_id in active_relics
+
+
+# ── API museo ─────────────────────────────────────────────────────────────
+
+func can_upgrade_museum() -> bool:
+	return museum_level < MUSEUM_MAX_LEVEL
+
+
+## -1 si ya está al máximo (usar can_upgrade_museum() antes de mostrar precio)
+func get_museum_upgrade_cost() -> int:
+	if not can_upgrade_museum():
+		return -1
+	return MUSEUM_UPGRADE_COSTS[museum_level - 1]
+
+
+## Cobra el oro y sube el nivel. false si ya está al máximo o no alcanza el oro.
+func upgrade_museum() -> bool:
+	if not can_upgrade_museum():
+		return false
+	var cost: int = get_museum_upgrade_cost()
+	if not spend_gold(cost):
+		return false
+	museum_level += 1
+	emit_signal("museum_upgraded", museum_level)
+	return true
 
 
 # ── Construcción de secuencia ─────────────────────────────────────────────

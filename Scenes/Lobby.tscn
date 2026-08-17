@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="2_lolwk"]
 [ext_resource type="PackedScene" uid="uid://cxk7ltonuc0jy" path="res://Scenes/Portal.tscn" id="3_wgubu"]
 [ext_resource type="Script" uid="uid://b7symlye8of4w" path="res://Scenes/RelicPedestal.gd" id="4_nsj2m"]
+[ext_resource type="Script" uid="uid://wygd8ktbaiwy" path="res://Scenes/MuseumUpgradeAltar.gd" id="5_xy1bw"]
 
 [node name="Lobby" type="Node2D" unique_id=1784873453]
 script = ExtResource("1_bpe3w")
@@ -17,6 +18,7 @@ position = Vector2(628, 355.00003)
 position = Vector2(-472, -151)
 
 [node name="RelicPedestals" type="Node2D" parent="." unique_id=1328142068]
+position = Vector2(538, 78)
 script = ExtResource("4_nsj2m")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=684270851]
@@ -24,3 +26,7 @@ script = ExtResource("4_nsj2m")
 [node name="RelicsLabel" type="Label" parent="HUD" unique_id=1071387314]
 offset_right = 40.0
 offset_bottom = 23.0
+
+[node name="MuseumUpgradeAltar" type="Node2D" parent="." unique_id=799120098]
+position = Vector2(628, 269)
+script = ExtResource("5_xy1bw")

@@ -1,4 +1,10 @@
 # room.gd — Sala de combate con oleadas y spawn indicators
+#
+# SPAWN: las oleadas aparecen en un anillo alrededor del jugador (estilo
+# Vampire Survivors/Brotato solo en este aspecto puntual — el spawn, no el
+# combate, que sigue siendo disparo manual). Ya no depende de marcadores de
+# enemigo colocados a mano en el editor: cualquier sala de combate, pintada
+# o no, tiene oleadas completas desde el primer momento.
 extends "res://Rooms/portal_room.gd"
 
 const ENEMY_POOLS: Array = [
@@ -14,38 +20,27 @@ const WAVE_CONFIG: Array = [
 const SPAWN_WARN_DURATION: float = 3.0
 const WAVE_DELAY:          float = 1.0
 
+# ── Spawn alrededor del jugador ────────────────────────────────────────────
+@export var wave_spawn_min_radius:  float = 220.0   # muy cerca se siente injusto
+@export var wave_spawn_max_radius:  float = 380.0   # muy lejos y el enemigo tarda en llegar
+@export var wave_spawn_edge_margin: float = 48.0     # no caer pegado a la pared
+const SPAWN_PLACEMENT_ATTEMPTS: int = 12             # intentos por punto antes de resignarse
+
 var enemies_alive:    int   = 0
-var _spawn_positions: Array = []
 var _pending_spawn_positions: Array[Vector2] = []
 var _wave_sizes:      Array = []
 var _current_wave:    int   = 0
 var _zone:            int   = 0
 var _pool:            Array = []
-# Índice de posición de spawn — se cicla con módulo para reusar posiciones
-var _spawn_pos_idx:   int   = 0
 
 
 func _ready() -> void:
 	_setup_portal_base()
-
-	for child in get_children():
-		if child.is_in_group("Enemy") or (child.get_script() and str(child.get_script().resource_path).contains("enemy")):
-			_spawn_positions.append(child.global_position)
-			child.queue_free()
-
-	if _spawn_positions.is_empty():
-		for child in get_children():
-			if child.name.begins_with("Enemy") and child is Node2D:
-				_spawn_positions.append(child.global_position)
-				child.queue_free()
+	_clear_legacy_spawn_markers()
 
 	_zone = clamp(RunManager.current_zone_index, 0, WAVE_CONFIG.size() - 1)
 	_pool = ENEMY_POOLS[_zone]
 	_wave_sizes = _calculate_waves()
-
-	if _spawn_positions.is_empty():
-		_open_portals()
-		return
 
 	if not is_inside_tree():
 		return
@@ -55,9 +50,21 @@ func _ready() -> void:
 	_show_wave_indicators()
 
 
+# Salas viejas todavía pueden tener nodos Enemy colocados a mano como
+# marcador de spawn (sistema anterior) — ya no se usan para calcular
+# posiciones, pero si quedó alguno en la escena hay que sacarlo para que no
+# aparezca como un enemigo real extra parado ahí desde el arranque.
+func _clear_legacy_spawn_markers() -> void:
+	for child in get_children():
+		if child.is_in_group("Enemy") or (child.get_script() and str(child.get_script().resource_path).contains("enemy")):
+			child.queue_free()
+	for child in get_children():
+		if child.name.begins_with("Enemy") and child is Node2D:
+			child.queue_free()
+
+
 func _calculate_waves() -> Array:
 	var cfg: Dictionary = WAVE_CONFIG[_zone]
-	# Ya no limitamos por _spawn_positions.size() — las posiciones se reusan con módulo
 	var total: int = randi_range(cfg["min"], cfg["max"])
 	var sizes: Array = []
 	var assigned: int = 0
@@ -69,27 +76,51 @@ func _calculate_waves() -> Array:
 	return sizes
 
 
+# Arma `count` posiciones en un anillo alrededor del jugador (entre
+# wave_spawn_min_radius y wave_spawn_max_radius), evitando caer fuera del
+# área jugable o pegado a la pared. Si no hay tilemap de piso todavía
+# (sala sin pintar), no valida contra el área — igual reparte los puntos
+# alrededor del jugador, para que el combate funcione desde el día uno.
+func _get_wave_spawn_positions(count: int) -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	var player: Node2D = _get_player_node()
+	if player == null:
+		return positions
+
+	var local_player: Vector2 = to_local(player.global_position)
+	var play_area: Rect2 = MapBorder.get_play_area(self)
+	var has_bounds: bool = play_area.size.x > 0.0 and play_area.size.y > 0.0
+	var safe_area: Rect2 = play_area.grow(-wave_spawn_edge_margin) if has_bounds else Rect2()
+
+	for i in range(count):
+		var chosen: Vector2 = local_player
+		var found: bool = false
+		for attempt in range(SPAWN_PLACEMENT_ATTEMPTS):
+			var angle:  float = randf() * TAU
+			var radius: float = randf_range(wave_spawn_min_radius, wave_spawn_max_radius)
+			var candidate: Vector2 = local_player + Vector2(cos(angle), sin(angle)) * radius
+			if not has_bounds or safe_area.has_point(candidate):
+				chosen = candidate
+				found  = true
+				break
+		# Si ningún intento cayó dentro del área (sala chica/angosta), se
+		# usa el último candidato igual — mejor un spawn algo pegado a la
+		# pared que perder una posición entera de la oleada.
+		positions.append(chosen)
+	return positions
+
+
+func _get_player_node() -> Node2D:
+	var nodes := get_tree().get_nodes_in_group("player")
+	if nodes.is_empty():
+		return null
+	return nodes[0] as Node2D
+
+
 func _show_wave_indicators() -> void:
 	var count: int = _wave_sizes[_current_wave] if _current_wave < _wave_sizes.size() else 0
 
-	# Calcular posiciones finales UNA vez — se reusan en _spawn_wave
-	var shuffled: Array = _spawn_positions.duplicate()
-	shuffled.shuffle()
-	var final_positions: Array[Vector2] = []
-	var used: Dictionary = {}
-	for i in range(count):
-		var base_pos: Vector2 = shuffled[i % shuffled.size()]
-		var key: String = str(base_pos)
-		var times: int = used.get(key, 0)
-		var offset: Vector2 = Vector2.ZERO
-		if times > 0:
-			# Distribuir en círculo alrededor del punto base
-			var angle: float = (TAU / 4.0) * times + randf() * 0.5
-			offset = Vector2(cos(angle), sin(angle)) * 45.0
-		used[key] = times + 1
-		final_positions.append(base_pos + offset)
-
-	# Guardar para que _spawn_wave use exactamente las mismas posiciones
+	var final_positions: Array[Vector2] = _get_wave_spawn_positions(count)
 	_pending_spawn_positions = final_positions
 
 	var indicators: Array = []
@@ -114,16 +145,16 @@ func _spawn_wave() -> void:
 			continue
 		var enemy = scene.instantiate()
 		add_child(enemy)
-		enemy.global_position = pos
+		enemy.global_position = to_global(pos)
 		enemy.died.connect(_on_enemy_died)
 		enemies_alive += 1
 	_pending_spawn_positions.clear()
 	_current_wave += 1
 
 
-func _build_spawn_indicator(world_pos: Vector2) -> Node2D:
+func _build_spawn_indicator(local_pos: Vector2) -> Node2D:
 	var node := Node2D.new()
-	node.global_position = world_pos
+	node.position = local_pos
 	var rect := ColorRect.new()
 	rect.color    = Color(1.0, 0.15, 0.15, 0.7)
 	rect.size     = Vector2(36, 36)
@@ -160,8 +191,6 @@ func _animate_indicators(indicators: Array) -> void:
 			var lbl: Label = ind.get_node_or_null("CountLabel")
 			if lbl:
 				lbl.text = str(remaining)
-
-
 
 
 func _on_enemy_died() -> void:

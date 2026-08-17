@@ -14,7 +14,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("2_onc7b")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Dead",
 "speed": 10.0
 }, {
@@ -22,7 +22,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("3_6sqj4")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Idle",
 "speed": 10.0
 }, {
@@ -30,7 +30,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("4_wcooe")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Jump",
 "speed": 10.0
 }, {
@@ -41,7 +41,7 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("5_aultx")
 }],
-"loop": true,
+"loop": 1,
 "name": &"Walk",
 "speed": 10.0
 }]
@@ -51,7 +51,7 @@ size = Vector2(17, 8.5)
 
 [node name="EnemyFrancotirador" type="CharacterBody2D" unique_id=2056591160 groups=["Enemy"]]
 collision_layer = 4
-collision_mask = 19
+collision_mask = 3
 script = ExtResource("1_lwskr")
 bullet_scene = ExtResource("2_6sqj4")
 

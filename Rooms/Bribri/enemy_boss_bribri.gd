@@ -3,9 +3,11 @@
 # de la sala y ataca con proyectiles, sin perseguir ni embestir.
 #
 # FASES:
-#   Fase 1 (100% → 50% vida): FAN_SHOT + BARRAGE
-#   Fase 2 (< 50% vida): todo lo anterior más frecuente + SUMMON (invoca Lanceros)
+#   Fase 1 (100% → 50% vida): FAN_SHOT + BARRAGE + SPIRAL
+#   Fase 2 (< 50% vida): todo lo anterior más frecuente, más SUMMON (invoca
+#     Lanceros) y RING_BURST (anillo de 360°).
 #     La transición a Fase 2 tiene una pausa de 1.5 s con flash blanco.
+
 
 extends "res://Enemies/enemy.gd"
 
@@ -13,7 +15,7 @@ extends "res://Enemies/enemy.gd"
 @export var bullet_scene:   PackedScene
 @export var lancero_scene:  PackedScene
 
-# Barrage (reemplaza a la carga física — línea de balas telegrafiada)
+# Barrage (línea de balas telegrafiada)
 @export var barrage_windup:    float = 0.55
 @export var barrage_bullets:   int   = 10
 @export var barrage_interval:  float = 0.06
@@ -35,13 +37,43 @@ extends "res://Enemies/enemy.gd"
 @export var summon_cooldown: float = 8.0
 @export var summon_offset:   float = 120.0
 
+# Espiral (chorro rotante — disponible desde Fase 1, obliga a moverse en vez
+# de esquivar una sola vez, porque el brazo va barriendo toda la sala)
+@export var spiral_cooldown:            float = 7.0
+@export var spiral_windup:              float = 0.4
+@export var spiral_duration:            float = 2.2
+@export var spiral_bullet_interval:     float = 0.08
+@export var spiral_rotation_speed_deg:  float = 260.0
+@export var spiral_speed:               float = 300.0
+@export var spiral_damage:              float = 10.0
+
+# Anillo de 360° (Fase 2 — ataque más fuerte, telegrafiado más largo)
+@export var ring_cooldown: float = 6.0
+@export var ring_windup:   float = 0.9
+@export var ring_bullets:  int   = 16
+@export var ring_speed:    float = 260.0
+@export var ring_damage:   float = 12.0
+
+# Pesos de selección — probabilidad relativa entre los ataques disponibles
+# en ese instante (no son porcentajes fijos, se normalizan solos según
+# cuáles estén listos). Subir un peso hace que ese ataque salga más seguido
+# sin quitarle del todo la chance a los demás.
+@export var weight_fan:     float = 1.0
+@export var weight_barrage: float = 1.0
+@export var weight_spiral:  float = 0.9
+@export var weight_summon:  float = 1.0
+@export var weight_ring:    float = 0.6   # más fuerte → pesa menos
+
 # ── Constantes
 const PHASE2_THRESHOLD: float = 0.5
 const CONTACT_INTERVAL: float = 0.55
 const PHASE_FLASH_TIME: float = 1.5
 
 # ── Estado interno
-enum State { IDLE, BARRAGE_WINDUP, BARRAGE, FAN_SHOT, SUMMON, PHASE_TRANSITION }
+enum State {
+	IDLE, BARRAGE_WINDUP, BARRAGE, FAN_SHOT, SUMMON,
+	SPIRAL_WINDUP, SPIRAL, RING_WINDUP, PHASE_TRANSITION
+}
 
 var state:              State = State.IDLE
 var state_timer:        float = 0.0
@@ -54,6 +86,15 @@ var _fan_timer:         float = 1.0
 var _summon_timer:      float = 4.0
 var _phase:             int   = 1
 var _phase2_entered:    bool  = false
+
+# Espiral
+var _spiral_timer:      float = 4.5
+var _spiral_angle:      float = 0.0
+var _spiral_time_left:  float = 0.0
+var _spiral_shot_timer: float = 0.0
+
+# Anillo (solo cuenta en Fase 2, igual que summon)
+var _ring_timer:        float = 5.0
 
 
 # ── Setup
@@ -91,8 +132,10 @@ func _behavior(delta: float) -> void:
 
 	_fan_timer     -= delta
 	_barrage_timer -= delta
+	_spiral_timer  -= delta
 	if _phase == 2:
 		_summon_timer -= delta
+		_ring_timer    -= delta
 
 	match state:
 		State.IDLE:
@@ -100,13 +143,7 @@ func _behavior(delta: float) -> void:
 			if dist < 40.0:
 				_try_contact_damage(player, contact_damage)
 
-			# Prioridad: abanico > invocación > barrage
-			if _fan_timer <= 0.0:
-				_enter_fan_shot()
-			elif _phase == 2 and _summon_timer <= 0.0:
-				_enter_summon()
-			elif _barrage_timer <= 0.0:
-				_enter_barrage_windup()
+			_try_start_attack()
 
 		State.BARRAGE_WINDUP:
 			if fmod(state_timer, 0.1) < 0.05:
@@ -132,6 +169,63 @@ func _behavior(delta: float) -> void:
 		State.SUMMON:
 			if state_timer <= 0.0:
 				_do_summon()
+
+		State.SPIRAL_WINDUP:
+			if state_timer <= 0.0:
+				_start_spiral(to_player.normalized())
+
+		State.SPIRAL:
+			_spiral_time_left  -= delta
+			_spiral_angle      += deg_to_rad(spiral_rotation_speed_deg) * delta
+			_spiral_shot_timer -= delta
+			if _spiral_shot_timer <= 0.0:
+				_fire_spiral_bullet()
+				_spiral_shot_timer = spiral_bullet_interval
+			if _spiral_time_left <= 0.0:
+				_set_telegraphing(false)
+				_spiral_timer = spiral_cooldown
+				state = State.IDLE
+
+		State.RING_WINDUP:
+			if state_timer <= 0.0:
+				_fire_ring()
+
+
+# ── Selección de ataque (aleatoria con pesos, entre los que estén listos)
+func _try_start_attack() -> void:
+	var candidates: Array = []
+
+	if _fan_timer <= 0.0:
+		candidates.append({"enter": Callable(self, "_enter_fan_shot"), "weight": weight_fan})
+	if _barrage_timer <= 0.0:
+		candidates.append({"enter": Callable(self, "_enter_barrage_windup"), "weight": weight_barrage})
+	if _spiral_timer <= 0.0:
+		candidates.append({"enter": Callable(self, "_enter_spiral_windup"), "weight": weight_spiral})
+	if _phase == 2:
+		if _summon_timer <= 0.0:
+			candidates.append({"enter": Callable(self, "_enter_summon"), "weight": weight_summon})
+		if _ring_timer <= 0.0:
+			candidates.append({"enter": Callable(self, "_enter_ring_windup"), "weight": weight_ring})
+
+	if candidates.is_empty():
+		return
+
+	var total_weight: float = 0.0
+	for c in candidates:
+		total_weight += c["weight"]
+
+	# Si por alguna razón todos los pesos quedaron en 0, se reparte parejo
+	if total_weight <= 0.0:
+		candidates.pick_random()["enter"].call()
+		return
+
+	var roll: float = randf() * total_weight
+	var acc:  float = 0.0
+	for c in candidates:
+		acc += c["weight"]
+		if roll <= acc:
+			c["enter"].call()
+			return
 
 
 # ── Entradas de estado
@@ -162,6 +256,28 @@ func _enter_summon() -> void:
 	_set_telegraphing(true)
 
 
+func _enter_spiral_windup() -> void:
+	state         = State.SPIRAL_WINDUP
+	state_timer   = spiral_windup
+	_spiral_timer = spiral_cooldown
+	_set_telegraphing(true)
+
+
+func _start_spiral(base_direction: Vector2) -> void:
+	state               = State.SPIRAL
+	_spiral_angle       = base_direction.angle()
+	_spiral_time_left   = spiral_duration
+	_spiral_shot_timer  = 0.0
+	_set_telegraphing(true)
+
+
+func _enter_ring_windup() -> void:
+	state       = State.RING_WINDUP
+	state_timer = ring_windup
+	_ring_timer = ring_cooldown
+	_set_telegraphing(true)
+
+
 func _enter_phase_transition() -> void:
 	state = State.PHASE_TRANSITION
 	_do_phase_transition()
@@ -178,7 +294,7 @@ func _fire_barrage_bullet() -> void:
 	bullet.global_position = global_position
 	bullet.speed  = barrage_speed
 	bullet.damage = barrage_damage
-	bullet.modulate = Color(2.0, 0.5, 0.2)   # naranja intenso — distinto del abanico
+	bullet.modulate = Color(2.0, 0.5, 0.2)   # naranja intenso — línea recta
 	if bullet.has_method("setup"):
 		bullet.setup(_barrage_direction, self, "enemy")
 
@@ -236,11 +352,50 @@ func _do_summon() -> void:
 	state = State.IDLE
 
 
+func _fire_spiral_bullet() -> void:
+	if bullet_scene == null:
+		return
+
+	var dir: Vector2 = Vector2.RIGHT.rotated(_spiral_angle)
+	var bullet = bullet_scene.instantiate()
+	get_parent().add_child(bullet)
+	bullet.global_position = global_position
+	bullet.speed  = spiral_speed
+	bullet.damage = spiral_damage
+	bullet.modulate = Color(0.6, 0.3, 1.8)   # morado — espiral
+	if bullet.has_method("setup"):
+		bullet.setup(dir, self, "enemy")
+
+
+func _fire_ring() -> void:
+	_set_telegraphing(false)
+	if bullet_scene == null:
+		state = State.IDLE
+		return
+
+	for i in range(ring_bullets):
+		var angle_deg: float = (360.0 / ring_bullets) * i
+		var dir: Vector2 = Vector2.RIGHT.rotated(deg_to_rad(angle_deg))
+
+		var bullet = bullet_scene.instantiate()
+		get_parent().add_child(bullet)
+		bullet.global_position = global_position
+		bullet.speed  = ring_speed
+		bullet.damage = ring_damage
+		bullet.modulate = Color(1.8, 1.8, 0.3)   # amarillo — anillo
+		if bullet.has_method("setup"):
+			bullet.setup(dir, self, "enemy")
+
+	state = State.IDLE
+
+
 # ── Transición a Fase 2
 func _do_phase_transition() -> void:
 	_phase = 2
 	fan_cooldown     *= 0.75
 	barrage_cooldown *= 0.7   # todo más frecuente en vez de "más rápido moviéndose"
+	spiral_cooldown  *= 0.8
+	ring_cooldown    *= 0.8
 
 	var flash_colors: Array = [
 		Color(2.0, 2.0, 2.0),
@@ -263,7 +418,9 @@ func _do_phase_transition() -> void:
 	state_timer    = 0.0
 	_fan_timer     = 1.0
 	_barrage_timer = 1.5
+	_spiral_timer  = 2.0
 	_summon_timer  = 2.0
+	_ring_timer    = 3.0
 
 
 # ── Visual: 2 sprites (Base/Glow) con fallback a modulate si no existen todavía

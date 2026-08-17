@@ -2,7 +2,7 @@
 extends Node2D
 
 const PEDESTAL_SCRIPT  := "res://Scenes/RelicPedestal.gd"
-const MAX_SLOTS:    int = 1
+const ALTAR_SCRIPT      := "res://Scenes/MuseumUpgradeAltar.gd"
 
 const PEDESTAL_ORIGIN:  Vector2 = Vector2(0, 80)
 const PEDESTAL_SPACING: float   = 200.0
@@ -22,11 +22,15 @@ var _menu_open: bool = false
 func _ready() -> void:
 	call_deferred("_disable_gun")
 	_populate_pedestals()
+	_setup_museum_altar()
 	_update_hud()
 	call_deferred("_build_lobby_menu")
 
-	if RunManager.equipped_relics.size() > MAX_SLOTS:
-		RunManager.equipped_relics = RunManager.equipped_relics.slice(0, MAX_SLOTS)
+	# Nivel de museo = cantidad de slots equipables. Si el jugador bajó de
+	# nivel por alguna razón (no debería pasar, pero por las dudas) se
+	# recorta en vez de dejar slots equipados "fantasma".
+	if RunManager.equipped_relics.size() > RunManager.museum_level:
+		RunManager.equipped_relics = RunManager.equipped_relics.slice(0, RunManager.museum_level)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -181,7 +185,7 @@ func _update_hud() -> void:
 	var lines: Array = []
 	lines.append("🪙 Oro: %d" % RunManager.get_display_gold())
 	lines.append("Reliquias descubiertas: %d / %d" % [total, MuseumData.get_all_relic_ids().size()])
-	lines.append("Slots equipados: %d / %d" % [equipped, MAX_SLOTS])
+	lines.append("Slots equipados: %d / %d" % [equipped, RunManager.museum_level])
 
 	if RunManager.last_run_floor > 0:
 		var result: String = "Victoria ✓" if RunManager.last_run_victory else "Derrota ✗"
@@ -200,12 +204,25 @@ func _populate_pedestals() -> void:
 
 	var script: Script = load(PEDESTAL_SCRIPT)
 
-	for i in range(MAX_SLOTS):
+	for i in range(RunManager.museum_level):
 		var pedestal := Node2D.new()
 		pedestal.set_script(script)
 		pedestal.position = PEDESTAL_ORIGIN + Vector2(i * PEDESTAL_SPACING, 0)
 		container.add_child(pedestal)
 		pedestal.call_deferred("setup", i)
+
+
+# El altar es un Node2D vacío que el usuario coloca a mano en Lobby.tscn
+# (mismo criterio que RelicPedestals: la posición la decide quien arma la
+# escena, el script se pega solo). Si no existe todavía en la escena, no
+# rompe nada — simplemente no hay forma de mejorar el museo hasta que se
+# agregue el nodo.
+func _setup_museum_altar() -> void:
+	var altar := get_node_or_null("MuseumUpgradeAltar")
+	if altar == null:
+		return
+	if altar.get_script() == null:
+		altar.set_script(load(ALTAR_SCRIPT))
 
 func _open_save_picker() -> void:
 	if _lobby_menu == null:
