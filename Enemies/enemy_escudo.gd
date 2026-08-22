@@ -1,5 +1,7 @@
 # enemy_escudo.gd — Portador de Escudo (melee)
-# Daño de contacto + reducción de daño frontal. Igual que antes más el fix.
+# Daño de contacto + reducción de daño frontal. Protege al aliado más cercano
+# refrescando su shielded_time_left, lo que activa el modo a distancia en
+# Lancero y el modo abanico en Ametralladora mientras están cerca de este.
 extends "res://Enemies/enemy.gd"
 
 @export var shield_damage_reduction: float = 0.6
@@ -24,6 +26,11 @@ func _behavior(delta: float) -> void:
 
 	var protect_target: Node2D = _find_ally_to_protect()
 
+	if protect_target != null and "shielded_time_left" in protect_target:
+		protect_target.shielded_time_left = 0.25
+		protect_target.shielding_ally = self
+		
+
 	if protect_target != null:
 		var to_player: Vector2 = (player.global_position - protect_target.global_position).normalized()
 		var ideal_pos: Vector2 = protect_target.global_position + to_player * 80.0
@@ -32,7 +39,6 @@ func _behavior(delta: float) -> void:
 		velocity = (player.global_position - global_position).normalized() * speed
 
 	_update_animation(velocity)
-	animated_sprite.flip_h = player.global_position.x < global_position.x
 
 	# Daño de contacto al estar cerca del jugador
 	if global_position.distance_to(player.global_position) < 32.0:
@@ -45,11 +51,23 @@ func take_damage(amount: float) -> void:
 	var player: Node2D = _get_player()
 	if player != null:
 		var to_attacker: Vector2 = (player.global_position - global_position).normalized()
-		var facing: Vector2 = Vector2(-1.0 if animated_sprite.flip_h else 1.0, 0.0)
+		var facing: Vector2 = _facing_vector()
 		var angle: float = rad_to_deg(to_attacker.angle_to(facing))
 		if abs(angle) < block_arc_degrees * 0.5:
 			amount *= (1.0 - shield_damage_reduction)
 	super.take_damage(amount)
+
+
+func _facing_vector() -> Vector2:
+	match _facing_dir:
+		FacingDir.LEFT:
+			return Vector2.LEFT
+		FacingDir.RIGHT:
+			return Vector2.RIGHT
+		FacingDir.UP:
+			return Vector2.UP
+		_:
+			return Vector2.DOWN
 
 
 func _find_ally_to_protect() -> Node2D:

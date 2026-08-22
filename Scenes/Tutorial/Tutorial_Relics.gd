@@ -29,7 +29,7 @@ func _on_relic_touched(body: Node) -> void:
 		"La Máscara de Sibö... en tus manos.",
 		"Por fin. Ahora podés verme con claridad, y yo a vos.",
 		"Esta máscara es un eco — un fragmento prestado de mi verdadero rostro.",
-		"Los Sula corrompieron el camino que unía mi mundo con el tuyo.",
+		"Los Áknama corrompieron el camino que unía mi mundo con el tuyo.",
 		"Por eso solo pude guiarte como una sombra, hasta ahora.",
 		"Cada reliquia que encuentres en tus aventuras es otro fragmento de ese camino roto — un préstamo, no un objeto único.",
 		"Y sé que Talamanca no es el único lugar donde esto ocurre...",

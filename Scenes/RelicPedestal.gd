@@ -9,10 +9,13 @@ var relic_data: Dictionary = {}
 
 var _player_in_range: bool    = false
 var _codex:           Node    = null
-var _visual:          ColorRect
+var _visual:          TextureRect
 var _label_name:      Label
 var _label_effect:    Label
 var _label_prompt:    Label
+
+# Ajustá esta ruta a donde termine viviendo el archivo en tu proyecto.
+const PEDESTAL_TEXTURE_PATH := "res://Assets/Paid/Museum_Black_Shadow_Singles_64.png"
 
 
 func setup(idx: int) -> void:
@@ -44,9 +47,19 @@ func _build_pedestal() -> void:
 	area.body_exited.connect(_on_body_exited)
 	add_child(area)
 
-	_visual = ColorRect.new()
-	_visual.size     = Vector2(140, 80)
-	_visual.position = Vector2(-70, -95)
+	_visual = TextureRect.new()
+	var tex: Texture2D = load(PEDESTAL_TEXTURE_PATH)
+	if tex != null:
+		_visual.texture = tex
+		_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # nítido al escalar pixel art
+		_visual.stretch_mode   = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_visual.size     = Vector2(96, 96)
+		_visual.position = Vector2(-48, -95)
+	else:
+		# Fallback si la ruta está mal — al menos no queda invisible del todo
+		push_warning("RelicPedestal: no se encontró la textura en " + PEDESTAL_TEXTURE_PATH)
+		_visual.size     = Vector2(96, 96)
+		_visual.position = Vector2(-48, -95)
 	add_child(_visual)
 
 	_label_name = Label.new()
@@ -108,12 +121,12 @@ func _refresh_visuals() -> void:
 	if _visual == null:
 		return
 	if relic_id == "":
-		_visual.color        = Color(0.12, 0.12, 0.18, 0.85)
+		_visual.modulate     = Color(0.55, 0.55, 0.65, 0.85)   # apagado — slot vacío
 		_label_name.text     = "Vacío"
 		_label_name.modulate = Color(0.4, 0.4, 0.4)
 		_label_effect.text   = "Selecciona una reliquia"
 	else:
-		_visual.color        = Color(0.35, 0.28, 0.06, 0.9)
+		_visual.modulate     = Color(1.15, 1.05, 0.75, 1.0)    # tinte cálido — slot equipado
 		_label_name.text     = relic_data.get("name", relic_id)
 		_label_name.modulate = Color(1.0, 0.85, 0.2)
 		_label_effect.text   = relic_data.get("effect", "")

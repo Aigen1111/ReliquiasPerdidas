@@ -33,6 +33,12 @@ var current_health: float
 var is_dead: bool = false
 var _hurt_flash_time_left: float = 0.0
 
+# Lo refresca enemy_escudo.gd cada frame mientras este enemigo está siendo
+# protegido — si el escudo deja de protegerlo (murió, se alejó, eligió otro
+# aliado), se apaga solo en fracciones de segundo sin que nadie más avise.
+var shielded_time_left: float = 0.0
+var shielding_ally: Node2D = null
+
 
 func _ready() -> void:
 	add_to_group("Enemy")
@@ -46,8 +52,13 @@ func _physics_process(delta: float) -> void:
 	if is_dead:
 		return
 	_hurt_flash_time_left = maxf(_hurt_flash_time_left - delta, 0.0)
+	shielded_time_left    = maxf(shielded_time_left - delta, 0.0)
 	_behavior(delta)
 	move_and_slide()
+
+
+func is_shielded() -> bool:
+	return shielded_time_left > 0.0
 
 
 # ── Comportamiento (sobreescribir en subclases) ────────────────────────────
@@ -72,7 +83,6 @@ func _get_player() -> Node2D:
 
 
 func _direction_from_vector(v: Vector2) -> int:
-	# Se queda con el eje dominante del vector. En Godot Y+ es hacia abajo.
 	if absf(v.x) > absf(v.y):
 		return FacingDir.RIGHT if v.x > 0.0 else FacingDir.LEFT
 	else:
@@ -81,7 +91,7 @@ func _direction_from_vector(v: Vector2) -> int:
 
 func _update_animation(direction: Vector2) -> void:
 	if _hurt_flash_time_left > 0.0:
-		return   # se está mostrando el flash de golpe, no lo pises con walk/idle
+		return
 
 	var moving := direction.length() > 0.1
 	if moving:
@@ -117,7 +127,6 @@ func take_damage(amount: float) -> void:
 func _die() -> void:
 	is_dead = true
 	died.emit()
-	# Entregar oro al run activo
 	if RunManager.is_in_run and gold_drop > 0:
 		RunManager.add_run_gold(gold_drop)
 	animated_sprite.play("Dead")

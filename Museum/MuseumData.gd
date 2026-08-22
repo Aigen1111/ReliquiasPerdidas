@@ -40,7 +40,7 @@ const RELICS: Dictionary = {
 	},
 	"piedra_tsuru": {
 		"name": "Piedra Tsuru",
-		"description": "Las piedras Tsuru son amuletos de jade y piedra verde usados en la cultura Bribri como objetos de protección. Según la tradición, contienen el alma de los ancestros y protegen a su portador de los espíritus malignos del bosque (los Sula).",
+		"description": "Las piedras Tsuru son amuletos de jade y piedra verde usados en la cultura Bribri como objetos de protección. Según la tradición, contienen el alma de los ancestros y protegen a su portador de los espíritus malignos del bosque (los Áknama).",
 		"pickup_line": "Piedra Tsuru. Los ancestros te protegen.",
 		"effect": "15% de probabilidad de esquivar daño",
 		"bonus_type": "dodge_chance",
