@@ -9,7 +9,7 @@ extends CanvasLayer
 
 enum Mode { LOBBY, RUN }
 
-signal relic_selected(relic_id: String)   # emitida en modo LOBBY al elegir
+signal relic_selected(relic_id: String, slot_idx: int)   # emitida en modo LOBBY al elegir
 
 const CELL_SIZE:    Vector2 = Vector2(64, 64)
 const COLS:         int     = 5
@@ -36,6 +36,7 @@ var _confirm_btn:   Button
 
 func _ready() -> void:
 	add_to_group("relic_codex")
+	layer = 10   # por encima del HUD, sin depender del orden del árbol
 	_all_ids = MuseumData.get_all_relic_ids()
 	_build_ui()
 	hide()
@@ -51,6 +52,7 @@ func open_lobby(slot_idx: int) -> void:
 	_confirm_btn.show()
 	_confirm_btn.text   = "Equipar"
 	_confirm_btn.disabled = true
+	_set_hud_visible(false)
 	get_tree().paused   = true
 	process_mode        = Node.PROCESS_MODE_ALWAYS
 	show()
@@ -63,6 +65,7 @@ func open_run() -> void:
 	_clear_detail()
 	_mode_label.text  = "Reliquias activas en este run"
 	_confirm_btn.hide()
+	_set_hud_visible(false)
 	get_tree().paused = true
 	process_mode      = Node.PROCESS_MODE_ALWAYS
 	show()
@@ -70,7 +73,17 @@ func open_run() -> void:
 
 func _close() -> void:
 	get_tree().paused = false
+	_set_hud_visible(true)
 	hide()
+
+
+func _set_hud_visible(value: bool) -> void:
+	var parent_hud := get_parent()
+	if parent_hud == null:
+		return
+	var lbl := parent_hud.get_node_or_null("RelicsLabel")
+	if lbl:
+		lbl.visible = value
 
 
 # ── Construcción de UI ────────────────────────────────────────────────────
@@ -278,7 +291,7 @@ func _clear_detail() -> void:
 func _on_confirm() -> void:
 	if _selected_id == "" or _mode != Mode.LOBBY:
 		return
-	emit_signal("relic_selected", _selected_id)
+	emit_signal("relic_selected", _selected_id, _slot_idx)
 	_close()
 
 

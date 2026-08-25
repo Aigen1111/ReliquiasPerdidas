@@ -93,7 +93,7 @@ static func _build_piece(parent: Node2D, rect: Rect2, color: Color) -> void:
 	visual.color = color
 	visual.size = rect.size
 	visual.position = -rect.size * 0.5
-	visual.z_index = -10
+	visual.z_index = -25
 	body.add_child(visual)
 
 	var col := CollisionShape2D.new()

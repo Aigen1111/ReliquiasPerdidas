@@ -20,6 +20,8 @@ var _menu_open: bool = false
 
 
 func _ready() -> void:
+	MapBorder.build(self, MapBorder.find_floor_tilemap(self))
+	DebugLabel.attach(self)
 	call_deferred("_disable_gun")
 	_populate_pedestals()
 	_setup_museum_altar()

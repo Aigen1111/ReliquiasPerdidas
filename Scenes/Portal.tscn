@@ -1,10 +1,61 @@
 [gd_scene format=3 uid="uid://cxk7ltonuc0jy"]
 
 [ext_resource type="Script" uid="uid://dklwaw5uy4ya" path="res://Scenes/Portal.gd" id="1_mdgx6"]
-[ext_resource type="Texture2D" uid="uid://chd4i2cat8is6" path="res://icon.svg" id="2_bseyl"]
+[ext_resource type="Texture2D" uid="uid://dd34p5umkr5fv" path="res://Assets/Paid/PortalSprites/Dimensional_Portal.png" id="2_mdgx6"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_mtwac"]
-radius = 60.0
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_vmftg"]
+radius = 31.0
+height = 110.0
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mdgx6"]
+atlas = ExtResource("2_mdgx6")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bseyl"]
+atlas = ExtResource("2_mdgx6")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mtwac"]
+atlas = ExtResource("2_mdgx6")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rf6x2"]
+atlas = ExtResource("2_mdgx6")
+region = Rect2(0, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_av48w"]
+atlas = ExtResource("2_mdgx6")
+region = Rect2(32, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_koq56"]
+atlas = ExtResource("2_mdgx6")
+region = Rect2(64, 32, 32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_g4v7s"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mdgx6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bseyl")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mtwac")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rf6x2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_av48w")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_koq56")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 5.0
+}]
 
 [node name="Portal" type="Area2D" unique_id=594001877]
 z_index = -1
@@ -13,15 +64,20 @@ script = ExtResource("1_mdgx6")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1865402465]
 position = Vector2(668, 317)
-shape = SubResource("CircleShape2D_mtwac")
+shape = SubResource("CapsuleShape2D_vmftg")
 
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=555920991]
-position = Vector2(665, 320)
-texture = ExtResource("2_bseyl")
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=564634486]
+z_index = 20
+position = Vector2(664, 312)
+scale = Vector2(3.5000014, 2.96875)
+sprite_frames = SubResource("SpriteFrames_g4v7s")
+animation = &"idle"
+frame = 1
+frame_progress = 0.5297663
 
 [node name="PromptLabel" type="Label" parent="." unique_id=1904473090]
-offset_left = 620.0
+offset_left = 625.0
 offset_top = 225.0
-offset_right = 826.0
+offset_right = 831.0
 offset_bottom = 248.0
 text = "Presiona E"

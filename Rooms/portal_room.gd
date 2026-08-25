@@ -135,11 +135,42 @@ func _build_portal(world_pos: Vector2, option: Dictionary) -> Area2D:
 	shape.shape = circle
 	area.add_child(shape)
 
-	var rect := ColorRect.new()
-	rect.color    = info["color"]
-	rect.size     = Vector2(44, 44)
-	rect.position = Vector2(-22, -22)
-	area.add_child(rect)
+	# --- INICIO ANIMATED SPRITE ---
+	var sprite := AnimatedSprite2D.new()
+	var frames := SpriteFrames.new()
+	
+	# Ajusta esta ruta si la imagen está en otra carpeta, ej: "res://Assets/Dimensional_Portal.png"
+	var tex: Texture2D = load("res://Assets/Paid/PortalSprites/Dimensional_Portal.png") 
+	
+	frames.add_animation("idle")
+	frames.set_animation_loop("idle", true)
+	frames.set_animation_speed("idle", 10) # Ajusta los FPS si lo ves muy rápido o lento
+	
+	# Dividir la hoja de sprites (3 columnas x 2 filas)
+	var cols: int = 3
+	var rows: int = 2
+	var frame_w: float = tex.get_width() / cols
+	var frame_h: float = tex.get_height() / rows
+	
+	for y in range(rows):
+		for x in range(cols):
+			var atlas := AtlasTexture.new()
+			atlas.atlas = tex
+			atlas.region = Rect2(x * frame_w, y * frame_h, frame_w, frame_h)
+			frames.add_frame("idle", atlas)
+	
+	sprite.sprite_frames = frames
+	sprite.play("idle")
+	
+	# Aplicar el filtro de color según el tipo de sala
+	sprite.modulate = info["color"]
+	
+	# Como el PNG es 32x32 y el ColorRect era de 44x44, podemos escalarlo un poco 
+	# para que mantenga un buen tamaño visual respecto a la colisión.
+	sprite.scale = Vector2(1.5, 1.5) 
+	
+	area.add_child(sprite)
+	# --- FIN ANIMATED SPRITE ---
 
 	var type_lbl := Label.new()
 	type_lbl.text                    = info["label"]
