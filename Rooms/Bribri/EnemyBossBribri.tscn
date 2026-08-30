@@ -113,6 +113,8 @@ size = Vector2(416.6667, 413.3333)
 
 [node name="EnemyBossBribri" type="CharacterBody2D" unique_id=1375713032 groups=["Enemy"]]
 scale = Vector2(0.3, 0.3)
+collision_layer = 4
+collision_mask = 3
 script = ExtResource("1_x1uvo")
 bullet_scene = ExtResource("2_6ka2g")
 lancero_scene = ExtResource("3_8joog")
