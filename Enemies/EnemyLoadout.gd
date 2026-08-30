@@ -1,15 +1,30 @@
 # EnemyLoadout.gd
-# Utilidad estática máscara y arma como capas placeholder sobre el cuerpo
-# base del enemigo. Geometría simple + emoji de referencia, para reemplazar
-# por sprites reales más adelante sin tocar la lógica de combate.
+# Máscaras: sprites reales (Assets/Paid/EnemySprites/Masks/), con textura
+# distinta por dirección (up/down/left) — "right" reutiliza la de "left"
+# con flip_h, ya que las hojas de origen no traen perfil derecho aparte.
+# Armas: siguen siendo placeholders geométricos hasta conseguir arte real.
 class_name EnemyLoadout
 extends RefCounted
 
+const MASK_TEXTURE_DIR := "res://Assets/Paid/EnemySprites/Masks/"
+
+# up/down: de frente (no hay arte de "espalda" en las hojas de origen, así
+# que reutilizan el mismo archivo). left: perfil real. right: el mismo
+# archivo de "left" con flip_h — ver _apply_mask_direction().
 const MASKS := {
-	"jaguar":   {"color": Color(0.85, 0.5, 0.1),   "label": "🐆"},
-	"danta":    {"color": Color(0.5, 0.4, 0.35),   "label": "🦌"},
-	"zopilote": {"color": Color(0.15, 0.15, 0.15), "label": "🦅"},
-	"harpia":   {"color": Color(0.75, 0.75, 0.78), "label": "🦅"},
+	"jaguar": {
+		"up": "jaguar.png", "down": "jaguar_down.png",
+		"left": "jaguar_left.png", "right": "jaguar_right.png",
+	},
+	"danta": {
+		"up": "danta.png", "down": "danta.png", "left": "danta_left.png",
+	},
+	"harpia": {
+		"up": "harpia.png", "down": "harpia.png", "left": "harpia_left.png",
+	},
+	"zopilote": {
+		"up": "zopilote.png", "down": "zopilote.png", "left": "zopilote_left.png",
+	},
 }
 
 const WEAPONS := {
@@ -21,31 +36,91 @@ const WEAPONS := {
 
 
 static func attach(enemy: Node2D, mask_id: String, weapon_id: String) -> void:
-	_attach_mask(enemy, mask_id)
+	#_attach_mask(enemy, mask_id)
 	_attach_weapon(enemy, weapon_id)
 
 
 static func _attach_mask(enemy: Node2D, mask_id: String) -> void:
 	if not MASKS.has(mask_id):
 		return
-	var data: Dictionary = MASKS[mask_id]
 
-	var mask := ColorRect.new()
-	mask.name = "MaskPlaceholder"
-	mask.size = Vector2(14, 10)
-	mask.position = Vector2(-7, -30)   # sobre la cabeza — ajustar cuando haya sprite real
-	mask.color = data["color"]
-	mask.z_index = 5
+	var mask := TextureRect.new()
+	mask.name = "Mask"
+	mask.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	mask.stretch_mode   = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mask.size     = Vector2(22, 18)   # más grande que el placeholder viejo — a 14x10 el detalle se perdía
+	mask.position = Vector2(-11, -9)  # AnimatedSprite2D no tiene offset -> el nodo está centrado en el
+									   # frame (16x32 centrado en el origen, de y=-16 a y=+16). y=-9 fue
+									   # ajustado a ojo contra el sprite real para que caiga en la cara.
+	mask.z_index  = 5
 	enemy.add_child(mask)
+	_apply_mask_direction(mask, mask_id, "down")   # mismo default que animated_sprite ("idle_down")
 
-	var lbl := Label.new()
-	lbl.name = "MaskLabel"
-	lbl.text = data.get("label", "")
-	lbl.add_theme_font_size_override("font_size", 10)
-	lbl.position = Vector2(-8, -46)
-	lbl.z_index = 6
-	enemy.add_child(lbl)
 
+## Llamado por enemy.gd cada vez que cambia _facing_dir, para que la máscara
+## gire junto con el cuerpo. dir_name: "up" | "down" | "left" | "right".
+static func update_mask_direction(enemy: Node2D, mask_id: String, dir_name: String) -> void:
+	if not MASKS.has(mask_id):
+		return
+	var mask := enemy.get_node_or_null("Mask") as TextureRect
+	if mask == null:
+		return
+	_apply_mask_direction(mask, mask_id, dir_name)
+
+
+static func _apply_mask_direction(mask: TextureRect, mask_id: String, dir_name: String) -> void:
+	var dirs: Dictionary = MASKS[mask_id]
+	var file: String = ""
+	var flip := false
+
+	if dir_name == "right" and dirs.has("right"):
+		# Algunos animales (jaguar) sí tienen un dibujo propio para "right",
+		# no todos dependen de espejar "left".
+		file = dirs["right"]
+	elif dir_name == "right":
+		file = dirs.get("left", dirs.get("down", ""))
+		flip = true
+	else:
+		file = dirs.get(dir_name, dirs.get("down", ""))
+
+	if file == "":
+		return
+	var tex: Texture2D = load(MASK_TEXTURE_DIR + file)
+	if tex == null:
+		push_warning("EnemyLoadout: no se encontró '%s' en %s" % [file, MASK_TEXTURE_DIR])
+		return
+	mask.texture = tex
+	mask.flip_h  = flip
+
+static func attach_corruption_particles(enemy: Node2D) -> void:
+	var particles := CPUParticles2D.new()
+	particles.name       = "CorruptionParticles"
+	particles.amount     = 10
+	particles.lifetime   = 1.6
+	particles.randomness = 0.4
+	particles.z_index    = 4   # delante del cuerpo (z=0), detrás del arma (z=5)
+
+	particles.direction              = Vector2(0, -1)
+	particles.spread                 = 25.0
+	particles.initial_velocity_min   = 4.0
+	particles.initial_velocity_max   = 10.0
+	particles.gravity                = Vector2(0, -6)   # negativo = flotan hacia arriba
+	particles.scale_amount_min       = 0.5
+	particles.scale_amount_max       = 1.2
+	particles.emission_shape         = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	particles.emission_sphere_radius = 6.0
+
+	# se desvanecen con el tiempo de vida (alpha 0.9 -> 0.0)
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(0.45, 0.05, 0.35, 0.9))
+	ramp.set_color(1, Color(0.45, 0.05, 0.35, 0.0))
+	particles.color_ramp = ramp
+
+	particles.position = Vector2(0, -6)   # centrado en el torso
+	particles.emitting = true
+	enemy.add_child(particles)
+	
+	
 
 static func _attach_weapon(enemy: Node2D, weapon_id: String) -> void:
 	if not WEAPONS.has(weapon_id):

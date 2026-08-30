@@ -111,6 +111,40 @@ func _play_hurt_flash() -> void:
 		animated_sprite.play(anim_name)
 		_hurt_flash_time_left = hurt_flash_duration
 
+static func attach_corruption_particles(enemy: Node2D) -> void:
+	var particles := GPUParticles2D.new()
+	particles.name       = "CorruptionParticles"
+	particles.amount     = 10
+	particles.lifetime   = 1.6
+	particles.randomness = 0.4
+	particles.z_index    = 4   # detrás de la máscara (z=5), delante del piso
+
+	var mat := ParticleProcessMaterial.new()
+	mat.direction              = Vector3(0, -1, 0)
+	mat.spread                 = 25.0
+	mat.initial_velocity_min   = 4.0
+	mat.initial_velocity_max   = 10.0
+	mat.gravity                = Vector3(0, -6, 0)   # negativo = flotan hacia arriba
+	mat.scale_min              = 0.5
+	mat.scale_max              = 1.2
+	mat.emission_shape         = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	mat.emission_sphere_radius = 6.0
+
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(0.45, 0.05, 0.35, 0.9))
+	ramp.set_color(1, Color(0.45, 0.05, 0.35, 0.0))
+	var ramp_tex := GradientTexture1D.new()
+	ramp_tex.gradient = ramp
+	mat.color_ramp = ramp_tex
+	particles.process_material = mat
+
+	var img := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	img.fill(Color(1, 1, 1, 1))
+	particles.texture = ImageTexture.create_from_image(img)
+
+	particles.position = Vector2(0, -6)
+	particles.emitting = true
+	enemy.add_child(particles)
 
 # ── Daño y muerte ──────────────────────────────────────────────────────────
 func take_damage(amount: float) -> void:

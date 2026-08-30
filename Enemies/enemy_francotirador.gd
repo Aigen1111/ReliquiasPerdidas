@@ -18,7 +18,7 @@ extends "res://Enemies/enemy.gd"
 @export var suppress_burst_max:        int   = 5
 @export var suppress_bullet_interval:  float = 0.08
 @export var suppress_spread_deg:       float = 18.0
-@export var suppress_cooldown:         float = 1.1
+@export var suppress_cooldown:         float = 1.4
 @export var suppress_bullet_speed:     float = 520.0
 @export var suppress_damage_factor:    float = 0.35   # cada bala de la ráfaga pega esta fracción del daño cargado
 @export var suppress_peek_offset:      float = 50.0   # cuánto se corre al costado del escudo para asomarse

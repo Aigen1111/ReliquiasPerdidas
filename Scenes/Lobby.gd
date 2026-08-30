@@ -2,10 +2,9 @@
 extends Node2D
 
 const PEDESTAL_SCRIPT  := "res://Scenes/RelicPedestal.gd"
-const ALTAR_SCRIPT      := "res://Scenes/MuseumUpgradeAltar.gd"
 
-const PEDESTAL_ORIGIN:  Vector2 = Vector2(0, 80)
-const PEDESTAL_SPACING: float   = 200.0
+const PEDESTAL_ORIGIN:  Vector2 = Vector2(-35, 80)
+const PEDESTAL_SPACING: float   = 150.0
 
 # Colores del menú
 const PANEL_COLOR  := Color(0.04, 0.04, 0.09, 0.94)
@@ -24,7 +23,6 @@ func _ready() -> void:
 	DebugLabel.attach(self)
 	call_deferred("_disable_gun")
 	_populate_pedestals()
-	_setup_museum_altar()
 	_update_hud()
 	call_deferred("_build_lobby_menu")
 
@@ -213,18 +211,6 @@ func _populate_pedestals() -> void:
 		container.add_child(pedestal)
 		pedestal.call_deferred("setup", i)
 
-
-# El altar es un Node2D vacío que el usuario coloca a mano en Lobby.tscn
-# (mismo criterio que RelicPedestals: la posición la decide quien arma la
-# escena, el script se pega solo). Si no existe todavía en la escena, no
-# rompe nada — simplemente no hay forma de mejorar el museo hasta que se
-# agregue el nodo.
-func _setup_museum_altar() -> void:
-	var altar := get_node_or_null("MuseumUpgradeAltar")
-	if altar == null:
-		return
-	if altar.get_script() == null:
-		altar.set_script(load(ALTAR_SCRIPT))
 
 func _open_save_picker() -> void:
 	if _lobby_menu == null:

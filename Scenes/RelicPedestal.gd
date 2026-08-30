@@ -68,12 +68,12 @@ func _build_pedestal() -> void:
 		_visual.texture = tex
 		_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_visual.stretch_mode   = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		_visual.size     = Vector2(96, 96)
-		_visual.position = Vector2(-48, -95)
+		_visual.size     = Vector2(32, 64)   # sprite real 16x32, x2 para que se note en pantalla
+		_visual.position = Vector2(-16, -63)
 	else:
 		push_warning("RelicPedestal: no se encontró la textura en " + PEDESTAL_TEXTURE_PATH)
-		_visual.size     = Vector2(96, 96)
-		_visual.position = Vector2(-48, -95)
+		_visual.size     = Vector2(32, 64)
+		_visual.position = Vector2(-16, -63)
 	add_child(_visual)
 
 	_label_name = Label.new()

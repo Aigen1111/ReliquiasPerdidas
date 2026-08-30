@@ -33,12 +33,22 @@ var _detail_effect: Label
 var _detail_count:  Label
 var _confirm_btn:   Button
 
+# Mejora del museo (solo modo LOBBY) — antes vivía en MuseumUpgradeAltar,
+# un objeto físico en el mundo. Se fusionó acá para no depender de un
+# nodo colocado a mano en cada escena de lobby.
+var _museum_sep:         ColorRect
+var _museum_label:       Label
+var _museum_upgrade_btn: Button
+var _museum_feedback:    Label
+
 
 func _ready() -> void:
 	add_to_group("relic_codex")
 	layer = 10   # por encima del HUD, sin depender del orden del árbol
 	_all_ids = MuseumData.get_all_relic_ids()
 	_build_ui()
+	RunManager.museum_upgraded.connect(_on_museum_upgraded)
+	RunManager.gold_changed.connect(_on_gold_changed)
 	hide()
 
 
@@ -52,6 +62,8 @@ func open_lobby(slot_idx: int) -> void:
 	_confirm_btn.show()
 	_confirm_btn.text   = "Equipar"
 	_confirm_btn.disabled = true
+	_set_museum_bar_visible(true)
+	_refresh_museum_bar()
 	_set_hud_visible(false)
 	get_tree().paused   = true
 	process_mode        = Node.PROCESS_MODE_ALWAYS
@@ -65,6 +77,7 @@ func open_run() -> void:
 	_clear_detail()
 	_mode_label.text  = "Reliquias activas en este run"
 	_confirm_btn.hide()
+	_set_museum_bar_visible(false)
 	_set_hud_visible(false)
 	get_tree().paused = true
 	process_mode      = Node.PROCESS_MODE_ALWAYS
@@ -95,10 +108,10 @@ func _build_ui() -> void:
 	_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_backdrop)
 
-	# Panel principal centrado ~780×520
+	# Panel principal centrado ~780×600 (creció 80px para la barra de museo)
 	_panel = ColorRect.new()
 	_panel.color    = Color(0.08, 0.09, 0.12, 0.97)
-	_panel.size     = Vector2(780, 520)
+	_panel.size     = Vector2(780, 600)
 	_panel.position = Vector2(50, 40)  # ajustar si la resolución cambia
 	add_child(_panel)
 
@@ -152,6 +165,27 @@ func _build_ui() -> void:
 	_confirm_btn.position = Vector2(490, 450)
 	_confirm_btn.pressed.connect(_on_confirm)
 	add_child(_confirm_btn)
+
+	# ── Mejora de museo (solo modo LOBBY) ──────────────────────────────────
+	_museum_sep = ColorRect.new()
+	_museum_sep.color    = Color(0.3, 0.3, 0.3)
+	_museum_sep.size     = Vector2(656, 1)
+	_museum_sep.position = Vector2(62, 530)
+	add_child(_museum_sep)
+
+	_museum_label = _make_label(Vector2(62, 540), Vector2(460, 40), 12)
+	_museum_label.modulate      = Color(0.85, 0.85, 0.85)
+	_museum_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+	_museum_upgrade_btn = Button.new()
+	_museum_upgrade_btn.size     = Vector2(172, 40)
+	_museum_upgrade_btn.position = Vector2(546, 540)
+	_museum_upgrade_btn.pressed.connect(_on_upgrade_museum_pressed)
+	add_child(_museum_upgrade_btn)
+
+	_museum_feedback = _make_label(Vector2(62, 584), Vector2(656, 16), 10)
+	_museum_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_museum_feedback.hide()
 
 
 func _make_label(pos: Vector2, sz: Vector2, font_size: int) -> Label:
@@ -293,6 +327,86 @@ func _on_confirm() -> void:
 		return
 	emit_signal("relic_selected", _selected_id, _slot_idx)
 	_close()
+
+
+# ── Mejora de museo (fusionado desde MuseumUpgradeAltar) ───────────────────
+# La lógica de niveles/costos vive en RunManager (museum_level,
+# MUSEUM_MAX_LEVEL, MUSEUM_UPGRADE_COSTS); acá solo la mostramos y la
+# gastamos. RunManager sigue siendo la única fuente de verdad.
+
+func _set_museum_bar_visible(value: bool) -> void:
+	if _museum_sep:
+		_museum_sep.visible = value
+	if _museum_label:
+		_museum_label.visible = value
+	if _museum_upgrade_btn:
+		_museum_upgrade_btn.visible = value
+	if not value and _museum_feedback:
+		_museum_feedback.hide()
+
+
+func _refresh_museum_bar() -> void:
+	if _museum_label == null:
+		return
+	var level: int = RunManager.museum_level
+
+	if RunManager.can_upgrade_museum():
+		var cost: int = RunManager.get_museum_upgrade_cost()
+		_museum_label.text = "Museo — Nivel %d / %d\nMejorar: +1 slot de reliquia equipable" \
+			% [level, RunManager.MUSEUM_MAX_LEVEL]
+		_museum_upgrade_btn.text     = "⬆ Mejorar (%d oro)" % cost
+		_museum_upgrade_btn.disabled = RunManager.get_display_gold() < cost
+	else:
+		_museum_label.text = "Museo — Nivel %d / %d\nNivel máximo alcanzado" \
+			% [level, RunManager.MUSEUM_MAX_LEVEL]
+		_museum_upgrade_btn.text     = "Nivel máximo"
+		_museum_upgrade_btn.disabled = true
+
+
+func _on_upgrade_museum_pressed() -> void:
+	if not RunManager.can_upgrade_museum():
+		_show_museum_feedback("Museo al nivel máximo", Color(0.7, 0.7, 0.7))
+		return
+
+	var cost: int = RunManager.get_museum_upgrade_cost()
+	if RunManager.get_display_gold() < cost:
+		_show_museum_feedback("Oro insuficiente (%d)" % cost, Color(1.0, 0.4, 0.4))
+		return
+
+	if RunManager.upgrade_museum():
+		_show_museum_feedback("¡Museo mejorado!", Color(0.4, 1.0, 0.6))
+	# Si upgrade_museum() falla acá (no debería, ya validamos arriba) no hace
+	# falta feedback extra — el próximo refresh de la barra ya lo refleja.
+
+
+func _show_museum_feedback(text: String, color: Color) -> void:
+	_museum_feedback.text       = text
+	_museum_feedback.modulate   = color
+	_museum_feedback.modulate.a = 1.0
+	_museum_feedback.show()
+
+	var tween := create_tween()
+	tween.tween_interval(1.2)
+	tween.tween_property(_museum_feedback, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(_museum_feedback.hide)
+
+
+# ── Reacciones a cambios de estado (RunManager es la fuente de verdad) ─────
+# Mismo patrón que usaba MuseumUpgradeAltar: al subir de nivel hay que avisarle
+# al Lobby que repueble los pedestales (uno más queda disponible) y refresque
+# el HUD — si no, el pedestal nuevo no aparece en el mundo hasta reabrir la
+# escena.
+func _on_museum_upgraded(_new_level: int) -> void:
+	_refresh_museum_bar()
+	var lobby := get_tree().current_scene
+	if lobby and lobby.has_method("_populate_pedestals"):
+		lobby._populate_pedestals()
+	if lobby and lobby.has_method("_update_hud"):
+		lobby._update_hud()
+
+
+func _on_gold_changed(_amount: int) -> void:
+	_refresh_museum_bar()
 
 
 func _input(event: InputEvent) -> void:
