@@ -67,7 +67,7 @@ const AREA_UNLOCK_ORDER := ["bribri"]
 # Empieza en 1; MUSEUM_UPGRADE_COSTS[nivel_actual - 1] = costo para subir al
 # siguiente. Con MUSEUM_MAX_LEVEL = 3 el array tiene 2 costos (1→2 y 2→3).
 const MUSEUM_MAX_LEVEL: int = 3
-const MUSEUM_UPGRADE_COSTS: Array = [150, 400]
+const MUSEUM_UPGRADE_COSTS: Array = [0, 400]
 
 # ── Estado persistente ────────────────────────────────────────────────────
 var gold: int = 0
