@@ -8,8 +8,8 @@ extends Node2D
 # Cada zona define su siguiente escena
 @export var next_scene: String = ""
 
-const C_PORTAL_LOCKED   := Color(0.3, 0.3, 0.3, 0.8)
-const C_PORTAL_UNLOCKED := Color(0.45, 0.2, 0.9, 0.9)
+const C_PORTAL_LOCKED   := Color(1.6, 0.35, 0.35)
+const C_PORTAL_UNLOCKED := Color(0.55, 1.6, 0.6)
 
 var _dialog:         Node  = null
 var _zone_complete:  bool  = false
@@ -28,6 +28,7 @@ func _setup() -> void:
 	
 	MapBorder.build(self, MapBorder.find_floor_tilemap(self))
 	DebugLabel.attach(self)
+	
 
 	# Crear DialogBox
 	_dialog = CanvasLayer.new()
@@ -87,15 +88,19 @@ func _set_portal_locked(locked: bool) -> void:
 	var exit := get_node_or_null("ExitTrigger")
 	if exit == null:
 		return
-	var rect := exit.get_node_or_null("ColorRect")
-	if rect:
-		rect.color = C_PORTAL_LOCKED if locked else C_PORTAL_UNLOCKED
+	# El visual pasó de ColorRect a AnimatedSprite2D (sprite real del portal,
+	# ver Door_Portal.tscn / el mismo Dimensional_Portal.png del Lobby) — se
+	# tiñe con modulate en vez de cambiar un color plano.
+	var sprite := exit.get_node_or_null("AnimatedSprite2D")
+	if sprite:
+		if not sprite.is_playing():
+			sprite.play("idle")
+		sprite.modulate = C_PORTAL_LOCKED if locked else C_PORTAL_UNLOCKED
 	# Mostrar/ocultar label
 	var lbl := exit.get_node_or_null("Label")
 	if lbl:
 		lbl.text    = "..." if locked else "[E] Continuar"
 		lbl.modulate = Color(0.5, 0.5, 0.5) if locked else Color(1, 1, 1)
-
 
 func _on_exit_entered(body: Node) -> void:
 	if not body.is_in_group("player"):

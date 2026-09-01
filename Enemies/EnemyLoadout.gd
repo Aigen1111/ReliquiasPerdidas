@@ -92,28 +92,43 @@ static func _apply_mask_direction(mask: TextureRect, mask_id: String, dir_name: 
 	mask.texture = tex
 	mask.flip_h  = flip
 
+## Textura circular suave para las partículas — sin esto, CPUParticles2D
+## dibuja un punto de 1-2px que casi no se nota.
+static func _make_particle_texture() -> Texture2D:
+	var size := 10
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var center := Vector2(size / 2.0, size / 2.0)
+	for x in range(size):
+		for y in range(size):
+			var d: float = Vector2(x, y).distance_to(center) / (size / 2.0)
+			var a: float = clampf(1.0 - d, 0.0, 1.0)
+			img.set_pixel(x, y, Color(1, 1, 1, a))
+	return ImageTexture.create_from_image(img)
+
+
 static func attach_corruption_particles(enemy: Node2D) -> void:
 	var particles := CPUParticles2D.new()
 	particles.name       = "CorruptionParticles"
-	particles.amount     = 10
+	particles.texture    = _make_particle_texture()
+	particles.amount     = 6
 	particles.lifetime   = 1.6
-	particles.randomness = 0.4
+	particles.randomness = 0.6
 	particles.z_index    = 4   # delante del cuerpo (z=0), detrás del arma (z=5)
 
 	particles.direction              = Vector2(0, -1)
 	particles.spread                 = 25.0
-	particles.initial_velocity_min   = 4.0
-	particles.initial_velocity_max   = 10.0
-	particles.gravity                = Vector2(0, -6)   # negativo = flotan hacia arriba
-	particles.scale_amount_min       = 0.5
-	particles.scale_amount_max       = 1.2
+	particles.initial_velocity_min   = 3.0
+	particles.initial_velocity_max   = 8.0
+	particles.gravity                = Vector2(0, -5)   # negativo = flotan hacia arriba
+	particles.scale_amount_min       = 1.6
+	particles.scale_amount_max       = 2.8
 	particles.emission_shape         = CPUParticles2D.EMISSION_SHAPE_SPHERE
 	particles.emission_sphere_radius = 6.0
 
-	# se desvanecen con el tiempo de vida (alpha 0.9 -> 0.0)
+	# se desvanecen con el tiempo de vida (alpha 1.0 -> 0.0)
 	var ramp := Gradient.new()
-	ramp.set_color(0, Color(0.45, 0.05, 0.35, 0.9))
-	ramp.set_color(1, Color(0.45, 0.05, 0.35, 0.0))
+	ramp.set_color(0, Color(0.65, 0.1, 0.55, 1.0))
+	ramp.set_color(1, Color(0.65, 0.1, 0.55, 0.0))
 	particles.color_ramp = ramp
 
 	particles.position = Vector2(0, -6)   # centrado en el torso

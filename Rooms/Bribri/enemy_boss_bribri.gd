@@ -97,6 +97,9 @@ var _spiral_shot_timer: float = 0.0
 var _ring_timer:        float = 5.0
 
 
+func _init() -> void:
+	has_corruption_particles = false
+
 # ── Setup
 func _ready() -> void:
 	super._ready()
@@ -146,10 +149,6 @@ func _behavior(delta: float) -> void:
 			_try_start_attack()
 
 		State.BARRAGE_WINDUP:
-			if fmod(state_timer, 0.1) < 0.05:
-				_set_telegraphing(true)
-			else:
-				_set_telegraphing(false)
 			if state_timer <= 0.0:
 				_start_barrage((player.global_position - global_position).normalized())
 
@@ -232,6 +231,7 @@ func _try_start_attack() -> void:
 func _enter_barrage_windup() -> void:
 	state       = State.BARRAGE_WINDUP
 	state_timer = barrage_windup
+	_set_telegraphing(true)
 
 
 func _start_barrage(direction: Vector2) -> void:
@@ -425,7 +425,7 @@ func _do_phase_transition() -> void:
 
 # ── Visual: 2 sprites (Base/Glow) con fallback a modulate si no existen todavía
 func _set_telegraphing(active: bool) -> void:
-	var anim_name := "Glow" if active else "Base"
+	var anim_name := "attack" if active else "idle_down"
 	if animated_sprite.sprite_frames and animated_sprite.sprite_frames.has_animation(anim_name):
 		animated_sprite.play(anim_name)
 		animated_sprite.modulate = Color.WHITE

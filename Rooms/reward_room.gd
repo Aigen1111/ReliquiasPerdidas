@@ -70,12 +70,23 @@ func _build_placeholder_pedestal() -> Area2D:
 	shape.shape   = circle
 	area.add_child(shape)
 
-	var rect := ColorRect.new()
-	rect.name     = "Visual"
-	rect.color    = Color(1.0, 0.78, 0.1, 0.9)
-	rect.size     = Vector2(32, 32)
-	rect.position = Vector2(-16, -16)
-	area.add_child(rect)
+	var icon_path: String = _relic_data.get("icon", "")
+	var icon_tex: Texture2D = load(icon_path) if icon_path != "" else null
+	var visual: Control
+	if icon_tex:
+		var tex_rect := TextureRect.new()
+		tex_rect.texture        = icon_tex
+		tex_rect.stretch_mode   = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tex_rect.expand_mode    = TextureRect.EXPAND_IGNORE_SIZE
+		visual = tex_rect
+	else:
+		visual = ColorRect.new()
+		visual.color = Color(1.0, 0.78, 0.1, 0.9)
+	visual.name     = "Visual"
+	visual.size     = Vector2(32, 32)
+	visual.position = Vector2(-16, -16)
+	area.add_child(visual)
 
 	var name_lbl := Label.new()
 	name_lbl.name                 = "NameLabel"
@@ -129,12 +140,12 @@ func _collect_relic() -> void:
 		RunManager.unlock_relic(_relic_id)
 	# NO se activa automáticamente — el jugador la equipa desde el lobby
 
-	var visual:     ColorRect = _pedestal_node.get_node_or_null("Visual")     if _pedestal_node else null
+	var visual:     Control  = _pedestal_node.get_node_or_null("Visual")     if _pedestal_node else null
 	var status_lbl: Label     = _pedestal_node.get_node_or_null("StatusLabel") if _pedestal_node else null
 	var prompt_lbl: Label     = _pedestal_node.get_node_or_null("PromptLabel") if _pedestal_node else null
 
 	if visual:
-		visual.color = Color(0.45, 0.45, 0.45, 0.4)
+		visual.modulate = Color(0.45, 0.45, 0.45, 0.4)
 	if prompt_lbl:
 		prompt_lbl.hide()
 	if status_lbl:

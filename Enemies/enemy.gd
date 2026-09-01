@@ -38,7 +38,7 @@ var _hurt_flash_time_left: float = 0.0
 # aliado), se apaga solo en fracciones de segundo sin que nadie más avise.
 var shielded_time_left: float = 0.0
 var shielding_ally: Node2D = null
-
+var has_corruption_particles: bool = true
 
 func _ready() -> void:
 	add_to_group("Enemy")
@@ -46,6 +46,8 @@ func _ready() -> void:
 	health_bar.update(current_health, max_health)
 	animated_sprite.play("idle_down")
 	EnemyLoadout.attach(self, mask_id, weapon_id)
+	if has_corruption_particles:
+		EnemyLoadout.attach_corruption_particles(self)
 
 
 func _physics_process(delta: float) -> void:

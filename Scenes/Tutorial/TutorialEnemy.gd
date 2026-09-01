@@ -10,11 +10,11 @@ signal died
 const HEALTH:    float = 30.0
 const COLOR_OK:  Color = Color(0.3, 0.7, 0.3)   # verde
 const COLOR_HIT: Color = Color(1.0, 0.3, 0.3)   # rojo al recibir daño
+const BOX_TEXTURE: Texture2D = preload("res://Assets/Paid/Crates/crate_broken.png")
 
 var current_health: float = HEALTH
-var _rect: ColorRect
 var _label: Label
-
+var _sprite: Sprite2D
 
 func _ready() -> void:
 	add_to_group("Enemy")
@@ -22,12 +22,9 @@ func _ready() -> void:
 
 
 func _build_visual() -> void:
-	# Cuerpo visual
-	_rect = ColorRect.new()
-	_rect.size     = Vector2(28, 28)
-	_rect.position = Vector2(-14, -14)
-	_rect.color    = COLOR_OK
-	add_child(_rect)
+	_sprite = Sprite2D.new()
+	_sprite.texture = BOX_TEXTURE
+	add_child(_sprite)
 
 	# "?" encima para que sea obvio que es un dummy
 	_label = Label.new()
@@ -51,12 +48,12 @@ func _build_visual() -> void:
 func take_damage(amount: float) -> void:
 	current_health -= amount
 	# Flash rojo
-	_rect.color = COLOR_HIT
+	_sprite.modulate = COLOR_HIT / COLOR_OK
 	await get_tree().create_timer(0.12).timeout
 	if not is_instance_valid(self):
 		return
 	if current_health > 0:
-		_rect.color = COLOR_OK
+		_sprite.modulate = COLOR_HIT / COLOR_OK
 	else:
 		_die()
 

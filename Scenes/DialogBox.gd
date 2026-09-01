@@ -11,19 +11,21 @@ const C_NAME        := Color(0.9, 0.78, 0.2)
 const C_NAME_HIDDEN := Color(0.5, 0.5, 0.5)
 const C_TEXT        := Color(1.0, 1.0, 1.0)
 const C_HINT        := Color(0.5, 0.5, 0.6)
-const C_SIBU_HIDDEN := Color(0.08, 0.08, 0.08)   # silueta negra
-const C_SIBU_SHOWN  := Color(0.55, 0.38, 0.08)   # dorado placeholder
+const C_SIBU_HIDDEN := Color(0.05, 0.05, 0.05)   # silueta casi negra (mismo sprite, oscurecido)
+const C_SIBU_SHOWN  := Color(1.0, 1.0, 1.0)      # colores reales del sprite
 
 const BOX_H  := 160
 const BOX_PAD := 20
 const SIBU_W  := 180
 const SIBU_H  := 220
 
+const SIBU_TEXTURE_PATH := "res://Assets/Paid/UI/SiboMascara.png"
+
 var _lines:     Array    = []
 var _current:   int      = 0
 var _on_finish: Callable = Callable()
 var _active:    bool     = false
-var _sibu_revealed: bool = false   # false = silueta, true = revelado
+var _sibu_revealed: bool = false   # false = silueta oscura, true = revelado
 
 var _backdrop:   ColorRect
 var _panel:      ColorRect
@@ -31,7 +33,7 @@ var _border:     PanelContainer
 var _name_label: Label
 var _text_label: Label
 var _hint_label: Label
-var _sibu_rect:  ColorRect
+var _sibu_rect:  TextureRect
 var _sibu_label: Label
 
 
@@ -80,7 +82,14 @@ func _build_ui() -> void:
 	_hint_label.add_theme_color_override("font_color", C_HINT)
 	add_child(_hint_label)
 
-	_sibu_rect = ColorRect.new()
+	_sibu_rect = TextureRect.new()
+	var sibu_tex: Texture2D = load(SIBU_TEXTURE_PATH)
+	if sibu_tex != null:
+		_sibu_rect.texture      = sibu_tex
+		_sibu_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_sibu_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	else:
+		push_warning("DialogBox: no se encontró el sprite de Sibö en " + SIBU_TEXTURE_PATH)
 	add_child(_sibu_rect)
 
 	_sibu_label = Label.new()
@@ -130,12 +139,12 @@ func reveal_sibu() -> void:
 
 func _apply_sibu_state() -> void:
 	if _sibu_revealed:
-		_sibu_rect.color  = C_SIBU_SHOWN
+		_sibu_rect.modulate = C_SIBU_SHOWN
 		_sibu_label.text  = "SIBÖ"
 		_name_label.text  = "Sibö"
 		_name_label.add_theme_color_override("font_color", C_NAME)
 	else:
-		_sibu_rect.color  = C_SIBU_HIDDEN
+		_sibu_rect.modulate = C_SIBU_HIDDEN
 		_sibu_label.text  = "???"
 		_name_label.text  = "???"
 		_name_label.add_theme_color_override("font_color", C_NAME_HIDDEN)

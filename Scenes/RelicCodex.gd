@@ -224,22 +224,38 @@ func _build_cell(id: String, known: bool, idx: int) -> Control:
 	cell.color    = _cell_color(id, known)
 	cell.name     = id
 
-	# Letra inicial como placeholder visual hasta tener sprites
-	var lbl := Label.new()
-	lbl.size                 = cell.size
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	lbl.add_theme_font_size_override("font_size", 22)
 	if known:
 		var data: Dictionary = MuseumData.get_relic(id)
-		lbl.text    = data.get("name", id).substr(0, 1).to_upper()
-		lbl.modulate = Color.WHITE
+		var icon_path: String = data.get("icon", "")
+		var icon_tex: Texture2D = load(icon_path) if icon_path != "" else null
+		if icon_tex:
+			var icon := TextureRect.new()
+			icon.texture         = icon_tex
+			icon.size            = cell.size - Vector2(12, 12)
+			icon.position        = Vector2(6, 6)
+			icon.stretch_mode    = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.texture_filter  = CanvasItem.TEXTURE_FILTER_NEAREST
+			icon.expand_mode     = TextureRect.EXPAND_IGNORE_SIZE
+			cell.add_child(icon)
+		else:
+			var lbl := Label.new()
+			lbl.size                 = cell.size
+			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+			lbl.add_theme_font_size_override("font_size", 22)
+			lbl.text    = data.get("name", id).substr(0, 1).to_upper()
+			lbl.modulate = Color.WHITE
+			cell.add_child(lbl)
 	else:
+		var lbl := Label.new()
+		lbl.size                 = cell.size
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+		lbl.add_theme_font_size_override("font_size", 22)
 		lbl.text    = "?"
 		lbl.modulate = Color(0.3, 0.3, 0.3)
-	cell.add_child(lbl)
+		cell.add_child(lbl)
 
-	# Borde dorado si está equipada
 	if id in RunManager.active_relics:
 		var border := ColorRect.new()
 		border.color    = Color(1.0, 0.8, 0.1, 0.4)
@@ -247,7 +263,6 @@ func _build_cell(id: String, known: bool, idx: int) -> Control:
 		border.position = Vector2.ZERO
 		cell.add_child(border)
 
-	# Contador de duplicados en runs
 	if _mode == Mode.RUN:
 		var count: int = RunManager.active_relics.count(id)
 		if count > 1:
@@ -258,12 +273,11 @@ func _build_cell(id: String, known: bool, idx: int) -> Control:
 			count_lbl.add_theme_font_size_override("font_size", 11)
 			cell.add_child(count_lbl)
 
-	# Input — usar _input global o Button invisible encima
 	var btn := Button.new()
 	btn.flat          = true
 	btn.size          = cell.size
 	btn.position      = Vector2.ZERO
-	btn.modulate      = Color(1, 1, 1, 0)  # invisible pero clickeable
+	btn.modulate      = Color(1, 1, 1, 0)
 	btn.pressed.connect(_on_cell_pressed.bind(id, known))
 	cell.add_child(btn)
 
