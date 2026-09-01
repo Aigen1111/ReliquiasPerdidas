@@ -514,7 +514,7 @@ shape = SubResource("CapsuleShape2D_cvnsp")
 
 [node name="Gun" parent="." unique_id=802591297 instance=ExtResource("3_6t5aa")]
 position = Vector2(2.199991, 1.1999922)
-scale = Vector2(0.35138887, 0.3874998)
+scale = Vector2(0.003, 0.003)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=581194483]
 zoom = Vector2(1.2, 1.2)

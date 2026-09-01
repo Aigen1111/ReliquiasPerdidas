@@ -86,7 +86,7 @@ func _shoot(direction: Vector2) -> void:
 		return
 	var bullet = bullet_scene.instantiate()
 	get_parent().add_child(bullet)
-	bullet.global_position = global_position
+	bullet.global_position = EnemyLoadout.get_weapon_muzzle_position(self)
 	bullet.speed           = bullet_speed
 	bullet.damage          = bullet_damage
 	bullet.modulate        = Color(0.2, 1.0, 0.3)
@@ -104,7 +104,7 @@ func _fire_fan(base_direction: Vector2) -> void:
 		var dir: Vector2 = base_direction.rotated(deg_to_rad(angle_deg))
 		var bullet = bullet_scene.instantiate()
 		get_parent().add_child(bullet)
-		bullet.global_position = global_position
+		bullet.global_position = EnemyLoadout.get_weapon_muzzle_position(self)
 		bullet.speed     = bullet_speed
 		bullet.damage    = bullet_damage
 		bullet.modulate  = Color(0.3, 0.9, 1.0)   # celeste — distingue el abanico del lineal
@@ -113,4 +113,4 @@ func _fire_fan(base_direction: Vector2) -> void:
 
 func _init() -> void:
 	mask_id   = "zopilote"
-	weapon_id = "cerbatana"
+	weapon_id = "honda"

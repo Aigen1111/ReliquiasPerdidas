@@ -135,7 +135,7 @@ func _throw_spear() -> void:
 	if bullet_scene != null:
 		var spear = bullet_scene.instantiate()
 		get_parent().add_child(spear)
-		spear.global_position = global_position
+		spear.global_position = EnemyLoadout.get_weapon_muzzle_position(self)
 		spear.speed    = throw_speed
 		spear.damage   = throw_damage
 		spear.modulate = Color(0.75, 0.55, 0.3)   # tono madera — lanza
@@ -144,6 +144,7 @@ func _throw_spear() -> void:
 	animated_sprite.modulate = Color.WHITE
 	state       = State.THROW_COOLDOWN
 	state_timer = throw_cooldown
+
 
 
 func _try_contact_damage(player: Node2D, amount: float) -> void:
@@ -158,6 +159,12 @@ func _on_hit_body_entered(body: Node) -> void:
 	if body.is_in_group("player") and body.has_method("take_damage"):
 		_try_contact_damage(body, charge_damage if state == State.CHARGE else contact_damage)
 
+func _on_body_entered(body: Node2D) -> void:
+	# Verificamos si lo que tocó la lanza pertenece al grupo "player"
+	if body.is_in_group("player"):
+		# Reemplaza "take_damage" por el método real que usas en el jugador para restar vida
+		if body.has_method("take_damage"):
+			body.take_damage(15.0) # Ajusta el número según el daño de la lanza
 
 func _enter_windup() -> void:
 	state       = State.WINDUP

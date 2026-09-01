@@ -32,10 +32,20 @@ func _process(delta: float) -> void:
 	if process_mode == Node.PROCESS_MODE_DISABLED:
 		return
 
-	var aim_direction := get_global_mouse_position() - global_position
-	if aim_direction != Vector2.ZERO:
-		look_at(global_position + aim_direction)
-		flip_v = aim_direction.x < 0.0
+	var player := get_parent() as Node2D
+	if player:
+		var mouse_pos := get_global_mouse_position()
+		var aim_direction := (mouse_pos - player.global_position).normalized()
+		
+		if aim_direction != Vector2.ZERO:
+			var orbit_radius: float = 18.0  # Ajusta este valor si lo quieres más cerca/lejos del cuerpo
+			
+			# Usamos posiciones globales para evitar interferencias con la escala del Player
+			global_position = player.global_position + (aim_direction * orbit_radius)
+			global_rotation = aim_direction.angle() + PI / 2.0
+			
+			# Giro horizontal sin romper la escala
+			flip_h = aim_direction.x < 0.0
 
 	if _reloading:
 		_reload_progress += delta / reload_time
@@ -62,7 +72,7 @@ func shoot() -> void:
 	var current_scene := get_tree().current_scene
 	if current_scene == null:
 		return
-	var aim_direction := Vector2.RIGHT.rotated(global_rotation)
+	var aim_direction := Vector2.UP.rotated(global_rotation)
 	if aim_direction == Vector2.ZERO:
 		return
 

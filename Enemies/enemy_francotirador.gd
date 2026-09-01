@@ -129,7 +129,7 @@ func _fire_suppress_bullet(base_direction: Vector2) -> void:
 	var dir: Vector2 = base_direction.rotated(deg_to_rad(angle_offset))
 	var bullet = bullet_scene.instantiate()
 	get_parent().add_child(bullet)
-	bullet.global_position = global_position
+	bullet.global_position = EnemyLoadout.get_weapon_muzzle_position(self)
 	bullet.speed    = suppress_bullet_speed
 	bullet.damage   = bullet_damage * suppress_damage_factor
 	bullet.modulate = Color(1.0, 0.55, 0.15)   # naranja — distingue de la flecha cargada (roja)
@@ -149,7 +149,7 @@ func _fire() -> void:
 		var dir: Vector2 = (aim_target - global_position).normalized()
 		var bullet = bullet_scene.instantiate()
 		get_parent().add_child(bullet)
-		bullet.global_position = global_position
+		bullet.global_position = EnemyLoadout.get_weapon_muzzle_position(self)
 		bullet.speed           = bullet_speed
 		bullet.damage           = bullet_damage
 		bullet.modulate         = Color(1.0, 0.3, 0.05)
@@ -161,4 +161,4 @@ func _fire() -> void:
 
 func _init() -> void:
 	mask_id   = "harpia"
-	weapon_id = "arco"
+	weapon_id = "cerbatana"

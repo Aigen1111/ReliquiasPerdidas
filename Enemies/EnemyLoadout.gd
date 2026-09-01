@@ -27,12 +27,25 @@ const MASKS := {
 	},
 }
 
-const WEAPONS := {
-	"lanza":     {"color": Color(0.6, 0.4, 0.2),   "size": Vector2(4, 30)},
-	"escudo":    {"color": Color(0.4, 0.3, 0.15),  "size": Vector2(16, 22)},
-	"cerbatana": {"color": Color(0.3, 0.2, 0.1),   "size": Vector2(3, 24)},
-	"arco":      {"color": Color(0.55, 0.35, 0.15),"size": Vector2(4, 26)},
+const WEAPON_TEXTURES := {
+	"lanza":     "res://Assets/Paid/Weapons/lanza.png",
+	"escudo":    "res://Assets/Paid/Weapons/Escudo.png",
+	"cerbatana": "res://Assets/Paid/Weapons/cerbatana.png",
+	"honda":     "res://Assets/Paid/Weapons/honda.png",
 }
+
+# Escala de arranque por arma — los PNG originales son gigantes (300-1600px),
+# hay que aplastarlos bastante para que se vean proporcionados al enemigo
+# (32x32px). Ajustá a ojo si hace falta.
+const WEAPON_SCALE := {
+	"lanza":     0.030,
+	"escudo":    0.05,
+	"cerbatana": 0.03,
+	"honda":     0.03,
+}
+
+const WEAPON_ORBIT_RADIUS: float = 22.0
+const WEAPON_ORBIT_PERIOD: float = 2.2   # segundos por vuelta completa
 
 
 static func attach(enemy: Node2D, mask_id: String, weapon_id: String) -> void:
@@ -138,15 +151,99 @@ static func attach_corruption_particles(enemy: Node2D) -> void:
 	
 
 static func _attach_weapon(enemy: Node2D, weapon_id: String) -> void:
-	if not WEAPONS.has(weapon_id):
+	if not WEAPON_TEXTURES.has(weapon_id):
 		return
-	var data: Dictionary = WEAPONS[weapon_id]
-	var sz: Vector2 = data["size"]
+	var tex: Texture2D = load(WEAPON_TEXTURES[weapon_id])
+	if tex == null:
+		return
 
-	var weapon := ColorRect.new()
-	weapon.name = "WeaponPlaceholder"
-	weapon.size = sz
-	weapon.position = Vector2(10, -sz.y * 0.5)   # al costado del cuerpo
-	weapon.color = data["color"]
-	weapon.z_index = 5
-	enemy.add_child(weapon)
+	var scale_factor: float = WEAPON_SCALE.get(weapon_id, 0.04)
+
+	var orbit := Node2D.new()
+	orbit.name = "WeaponOrbit"
+	orbit.set_meta("weapon_id", weapon_id)
+	enemy.add_child(orbit)
+
+	var sprite := Sprite2D.new()
+	sprite.name    = "WeaponSprite"
+	sprite.texture = tex
+	sprite.scale   = Vector2.ONE * scale_factor
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.z_index = 5
+	sprite.offset  = Vector2.ZERO 
+	orbit.add_child(sprite)
+
+	if weapon_id == "escudo":
+		sprite.position = Vector2(0, -18)
+		# Cambiar a -PI / 2.0 invierte el escudo para que no esté boca abajo
+		sprite.rotation = -PI / 2.0
+		orbit.set_meta("muzzle_local", Vector2.ZERO)
+		
+	elif weapon_id == "honda":
+		sprite.position = Vector2(0, -18)
+		orbit.set_meta("muzzle_local", Vector2.ZERO)
+		
+	else:
+		sprite.offset = Vector2(0, -tex.get_size().y / 2.0)
+		sprite.position = Vector2(0, -WEAPON_ORBIT_RADIUS)
+		var weapon_length = tex.get_size().y * scale_factor
+		orbit.set_meta("muzzle_local", Vector2(0, -weapon_length))
+		
+		# Crear hitbox dinámico si es una lanza
+		if weapon_id == "lanza":
+			var hitbox := Area2D.new()
+			hitbox.name = "WeaponHitbox"
+			hitbox.collision_layer = 0  # No emite colisión propia
+			hitbox.collision_mask = 1   # Detecta la capa del jugador (Capa 1)
+			
+			var shape := CollisionShape2D.new()
+			var capsule := CapsuleShape2D.new()
+			capsule.radius = 6.0        # Un poco más gruesa para asegurar el impacto
+			capsule.height = weapon_length
+			shape.shape = capsule
+			
+			shape.position = Vector2(0, -WEAPON_ORBIT_RADIUS - (weapon_length / 2.0))
+			hitbox.add_child(shape)
+			orbit.add_child(hitbox)
+			
+			# Conecta con el nombre correcto de tu función en el lancero
+			if enemy.has_method("_on_hit_body_entered"):
+				hitbox.body_entered.connect(enemy._on_hit_body_entered)
+			elif enemy.has_method("_on_body_entered"):
+				hitbox.body_entered.connect(enemy._on_body_entered)
+			
+## Rota el arma para que apunte hacia el jugador. Se llama todos los frames
+## (ver enemy.gd _physics_process).
+static func update_weapon_aim(enemy: Node2D) -> void:
+	var orbit := enemy.get_node_or_null("WeaponOrbit") as Node2D
+	if orbit == null: return
+	
+	var players := enemy.get_tree().get_nodes_in_group("player")
+	if players.is_empty(): return
+	
+	var player: Node2D = players[0]
+	var to_player: Vector2 = player.global_position - orbit.global_position
+	
+	var weapon_id: String = orbit.get_meta("weapon_id", "")
+	var sprite := orbit.get_node_or_null("WeaponSprite") as Sprite2D
+	
+	if weapon_id == "honda":
+		# La honda no orbita, se queda recta y cambia de lado del cuerpo
+		orbit.rotation = 0.0
+		if sprite:
+			sprite.flip_h = to_player.x < 0
+			sprite.position = Vector2(-15, 0) if to_player.x < 0 else Vector2(15, 0)
+	else:
+		# Lanzas, escudos y cerbatanas orbitan normalmente
+		orbit.rotation = to_player.angle() + PI / 2.0
+		
+		if weapon_id == "escudo" and sprite:
+			# flip_v corrige que el escudo no se vea de cabeza hacia la izquierda
+			sprite.flip_v = to_player.x < 0
+
+static func get_weapon_muzzle_position(enemy: Node2D) -> Vector2:
+	var orbit := enemy.get_node_or_null("WeaponOrbit") as Node2D
+	if orbit == null or not orbit.has_meta("muzzle_local"):
+		return enemy.global_position
+	var local_tip: Vector2 = orbit.get_meta("muzzle_local")
+	return orbit.global_position + local_tip.rotated(orbit.rotation)

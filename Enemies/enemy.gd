@@ -55,6 +55,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_hurt_flash_time_left = maxf(_hurt_flash_time_left - delta, 0.0)
 	shielded_time_left    = maxf(shielded_time_left - delta, 0.0)
+	EnemyLoadout.update_weapon_aim(self)
 	_behavior(delta)
 	move_and_slide()
 
