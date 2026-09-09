@@ -1,65 +1,27 @@
 [gd_scene format=3 uid="uid://bcp0638qpv25x"]
 
-[ext_resource type="Texture2D" uid="uid://cbpw1rrd1nhcp" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Enemies/Tiles/tile_0003.png" id="1_kpr8r"]
-[ext_resource type="Texture2D" uid="uid://dl7o76h5wr0b4" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Enemies/Tiles/tile_0000.png" id="2_1exfc"]
-[ext_resource type="Texture2D" uid="uid://8q3mvs72pe7h" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Enemies/Tiles/tile_0002.png" id="3_mo1ky"]
-[ext_resource type="Texture2D" uid="uid://b4xfrdgv4oagw" path="res://Assets/kenney_desert-shooter-pack_1.0/PNG/Enemies/Tiles/tile_0001.png" id="4_6bs3c"]
+[ext_resource type="SpriteFrames" uid="uid://cxffoo0ghcnbm" path="res://Enemies/EnemyBase_SpriteFrames.tres" id="2_wdetw"]
 [ext_resource type="Script" uid="uid://ke783twydrrl" path="res://Enemies/health_bar.gd" id="5_1exfc"]
 [ext_resource type="Script" uid="uid://b41p8wtv5lkm5" path="res://Enemies/enemy.gd" id="5_mo1ky"]
 
-[sub_resource type="SpriteFrames" id="SpriteFrames_uoxpr"]
-animations = [{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("1_kpr8r")
-}],
-"loop": true,
-"name": &"Dead",
-"speed": 10.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_1exfc")
-}],
-"loop": true,
-"name": &"Idle",
-"speed": 10.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("3_mo1ky")
-}],
-"loop": true,
-"name": &"Jump",
-"speed": 10.0
-}, {
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_1exfc")
-}, {
-"duration": 1.0,
-"texture": ExtResource("4_6bs3c")
-}],
-"loop": true,
-"name": &"Walk",
-"speed": 10.0
-}]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_vtle1"]
+radius = 9.0
+height = 26.0
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_mo1ky"]
-size = Vector2(17, 8.5)
-
-[node name="Enemy" type="CharacterBody2D" unique_id=2056591160]
+[node name="Enemy" type="CharacterBody2D" unique_id=2056591160 groups=["Enemy"]]
 collision_layer = 4
-collision_mask = 19
+collision_mask = 3
 script = ExtResource("5_mo1ky")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=777700644]
-sprite_frames = SubResource("SpriteFrames_uoxpr")
-animation = &"Walk"
+sprite_frames = ExtResource("2_wdetw")
+animation = &"hurt_down"
+frame = 2
+frame_progress = 1.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=392996600]
-position = Vector2(0.5, 8.25)
-shape = SubResource("RectangleShape2D_mo1ky")
+position = Vector2(0, 5)
+shape = SubResource("CapsuleShape2D_vtle1")
 
 [node name="HealthBar" type="Node2D" parent="." unique_id=126088844]
 script = ExtResource("5_1exfc")

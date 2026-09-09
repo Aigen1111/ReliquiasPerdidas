@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://bylteprtni82b"]
+
+[ext_resource type="Script" uid="uid://cyk7ydjwjio0l" path="res://Scenes/RunHUD.gd" id="1_dja5w"]
+
+[node name="RunHud" type="CanvasLayer" unique_id=58245182]
+layer = 5
+script = ExtResource("1_dja5w")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1206936654]
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=287206640]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1342121138]
+layout_mode = 2
+
+[node name="HealthBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=2135669531]
+custom_minimum_size = Vector2(180, 20)
+layout_mode = 2
+
+[node name="HealthLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1547493652]
+layout_mode = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1501777721]
+layout_mode = 2
+
+[node name="AmmoLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer2" unique_id=2088954968]
+layout_mode = 2
+text = "🔹 5 / 5"
+
+[node name="ReloadLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1280182817]
+layout_mode = 2
+text = "Recargando..."
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1423549687]
+layout_mode = 2
+
+[node name="DashContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HBoxContainer3" unique_id=595258711]
+layout_mode = 2
+
+[node name="GoldLabel" type="Label" parent="." unique_id=1163171463]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -185.0
+offset_bottom = 23.0
+grow_horizontal = 0
+text = "🪙 0"

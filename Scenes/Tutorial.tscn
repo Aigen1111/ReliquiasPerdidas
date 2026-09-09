@@ -1,0 +1,289 @@
+[gd_scene format=3 uid="uid://dsvlii63fxrt5"]
+
+[ext_resource type="PackedScene" uid="uid://wsdxy4neg7q4" path="res://Player/player.tscn" id="1_wduq8"]
+[ext_resource type="PackedScene" uid="uid://bcp0638qpv25x" path="res://Enemies/Enemy.tscn" id="3_7bloo"]
+[ext_resource type="Script" uid="uid://c6j7btj38lllg" path="res://Scenes/Tutorial/TutorialEnemy.gd" id="4_rlm2d"]
+
+[sub_resource type="GDScript" id="GDScript_uo1fs"]
+script/source = "# TutorialScene.gd
+
+
+extends Node2D
+
+const LOBBY_SCENE := \"res://Scenes/Lobby.tscn\"
+
+enum Zone { INTRO, MOVEMENT, SHOOTING, DASH, RELICS, DONE }
+
+var _current_zone:    Zone  = Zone.INTRO
+var _zone_triggered:  Array = [false, false, false, false, false]
+var _enemies_alive:   int   = 0
+var _relic_collected: bool  = false
+var _exit_unlocked:   bool  = false
+var _dialog:          Node  = null
+
+
+func _ready() -> void:
+	call_deferred(\"_setup\")
+
+
+func _setup() -> void:
+	# Instanciar DialogBox
+	var script: Script = load(\"res://Scenes/DialogBox.gd\")
+	_dialog = Node.new()
+	_dialog.set_script(script)
+	add_child(_dialog)
+
+	# Conectar triggers de zona
+	_connect_trigger(\"ZoneTrigger_Intro\",    Zone.INTRO)
+	_connect_trigger(\"ZoneTrigger_Movement\", Zone.MOVEMENT)
+	_connect_trigger(\"ZoneTrigger_Shooting\", Zone.SHOOTING)
+	_connect_trigger(\"ZoneTrigger_Dash\",     Zone.DASH)
+	_connect_trigger(\"ZoneTrigger_Relics\",   Zone.RELICS)
+
+	# Conectar enemigos del tutorial
+	var enemies_node := get_node_or_null(\"Enemies\")
+	if enemies_node:
+		for child in enemies_node.get_children():
+			if child.has_signal(\"died\"):
+				child.died.connect(_on_tutorial_enemy_died)
+				_enemies_alive += 1
+
+	# Conectar reliquia
+	var relic := get_node_or_null(\"RelicPickup\")
+	if relic:
+		relic.body_entered.connect(_on_relic_touched)
+
+	# Conectar portal de salida
+	var portal := get_node_or_null(\"ExitPortal\")
+	if portal:
+		portal.body_entered.connect(_on_exit_entered)
+
+	# Gun deshabilitado hasta zona de disparo
+	_set_gun_enabled(false)
+
+	# Trigger de intro se activa inmediatamente
+	_activate_zone(Zone.INTRO)
+
+
+# ── Triggers ──────────────────────────────────────────────────────────────
+
+func _connect_trigger(node_name: String, zone: Zone) -> void:
+	var trigger := get_node_or_null(\"Triggers/\" + node_name)
+	if trigger == null:
+		push_warning(\"TutorialScene: no se encontró Triggers/%s\" % node_name)
+		return
+	trigger.body_entered.connect(_on_trigger_entered.bind(zone))
+
+
+func _on_trigger_entered(body: Node, zone: Zone) -> void:
+	if not body.is_in_group(\"player\"):
+		return
+	var idx: int = int(zone)
+	if _zone_triggered[idx]:
+		return
+	_zone_triggered[idx] = true
+	_activate_zone(zone)
+
+
+func _activate_zone(zone: Zone) -> void:
+	_current_zone = zone
+	match zone:
+		Zone.INTRO:     _dialog_intro()
+		Zone.MOVEMENT:  _dialog_movement()
+		Zone.SHOOTING:  _dialog_shooting()
+		Zone.DASH:      _dialog_dash()
+		Zone.RELICS:    _dialog_relics()
+
+
+# ── Completar zona ────────────────────────────────────────────────────────
+
+func _complete_zone() -> void:
+	# Abrir la puerta siguiente
+	var next_door_idx: int = int(_current_zone) + 1
+	var door := get_node_or_null(\"Doors/Door_%d\" % next_door_idx)
+	if door:
+		door.get_node_or_null(\"CollisionShape2D\").disabled = true
+		door.hide()
+
+	_current_zone = Zone.values()[int(_current_zone) + 1]
+
+	if _current_zone == Zone.DONE:
+		_exit_unlocked = true
+		var portal := get_node_or_null(\"ExitPortal\")
+		if portal:
+			# Feedback visual: cambiar color del portal
+			var rect := portal.get_node_or_null(\"ColorRect\")
+			if rect:
+				rect.color = Color(0.5, 0.3, 1.0)
+		_dialog.show_lines([
+			\"Todo está listo. El museo te espera al final del corredor.\",
+			\"Acércate al portal y presiona E para continuar.\",
+		])
+
+
+# ── Enemigos ──────────────────────────────────────────────────────────────
+
+func _on_tutorial_enemy_died() -> void:
+	_enemies_alive -= 1
+	if _enemies_alive <= 0 and _current_zone == Zone.SHOOTING:
+		_dialog.show_lines([
+			\"¡Bien hecho! Has eliminado a las criaturas corrompidas.\",
+			\"Continúa adelante.\",
+		], _complete_zone)
+
+
+# ── Reliquia ──────────────────────────────────────────────────────────────
+
+func _on_relic_touched(body: Node) -> void:
+	if not body.is_in_group(\"player\") or _relic_collected:
+		return
+	_relic_collected = true
+	get_node_or_null(\"RelicPickup\").queue_free()
+	RunManager.unlock_relic(\"sibö_mascara\")
+	_dialog.show_lines([
+		\"Has recogido la Máscara de Sibö. Te otorga un 20% más de vida máxima.\",
+		\"Durante el run podés ver tus reliquias activas con Tab.\",
+		\"En el museo podés equiparlas antes de cada run.\",
+	], _complete_zone)
+
+
+# ── Portal de salida ──────────────────────────────────────────────────────
+
+func _on_exit_entered(body: Node) -> void:
+	if not body.is_in_group(\"player\") or not _exit_unlocked:
+		return
+	_dialog.show_lines([
+		\"El museo te espera, héroe.\",
+		\"Desde allí podrás equipar reliquias y adentrarte en los planos corrompidos.\",
+		\"Sibö confía en ti. ¡Buena suerte!\",
+	], func():
+		RunManager.tutorial_done = true
+		get_tree().change_scene_to_file(LOBBY_SCENE)
+	)
+
+
+# ── Diálogos ──────────────────────────────────────────────────────────────
+
+func _dialog_intro() -> void:
+	_dialog.show_lines([
+		\"...\",
+		\"¿Dónde... dónde estás?\",
+		\"Soy Sibö, creador de los Bribri y guardián de estos mundos.\",
+		\"Encontraste el collar en Talamanca. Eso no fue accidente.\",
+		\"Los planos están corrompidos. Necesito a alguien como vos para limpiarlos.\",
+		\"Pero primero... aprendamos cómo moverte en este lugar.\",
+	], _complete_zone)
+
+
+func _dialog_movement() -> void:
+	_dialog.show_lines([
+		\"Usá WASD o las flechas para moverte. El ratón apunta hacia donde mirás.\",
+		\"Explorá este corredor. Cuando estés listo, avanzá.\",
+	], _complete_zone)
+
+
+func _dialog_shooting() -> void:
+	_set_gun_enabled(true)
+	_dialog.show_lines([
+		\"Veo que tenés un arma. Interesante...\",
+		\"Click izquierdo para disparar. Tenés 5 balas antes de recargar.\",
+		\"Presioná R para recargar manualmente.\",
+		\"Hay criaturas corrompidas adelante. Eliminalas para continuar.\",
+	])
+	# No llama _complete_zone — espera a que mueran todos los enemigos
+
+
+func _dialog_dash() -> void:
+	_dialog.show_lines([
+		\"¡Buen trabajo! Pero no siempre podrás atacar de frente.\",
+		\"Presioná Espacio para hacer un dash y esquivar ataques.\",
+		\"Intentalo antes de continuar.\",
+	], _complete_zone)
+
+
+func _dialog_relics() -> void:
+	_dialog.show_lines([
+		\"Los planos corrompidos guardan reliquias de nuestros ancestros.\",
+		\"Recogé la que está adelante. Te dará más vida.\",
+	])
+	# No llama _complete_zone — espera a que el jugador toque la reliquia
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────
+
+func _set_gun_enabled(enabled: bool) -> void:
+	var players := get_tree().get_nodes_in_group(\"player\")
+	if players.is_empty():
+		return
+	var gun: Node = players[0].get_node_or_null(\"Gun\")
+	if gun:
+		gun.process_mode = Node.PROCESS_MODE_INHERIT if enabled \\
+			else Node.PROCESS_MODE_DISABLED
+"
+
+[node name="Tutorial" type="Node2D" unique_id=1939131754]
+script = SubResource("GDScript_uo1fs")
+
+[node name="Player" parent="." unique_id=591215505 instance=ExtResource("1_wduq8")]
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=1943747232]
+
+[node name="Doors" type="Node2D" parent="." unique_id=180847616]
+position = Vector2(1, 6)
+
+[node name="Door_1" type="StaticBody2D" parent="Doors" unique_id=437243082]
+position = Vector2(362, 76)
+
+[node name="Door_2" type="StaticBody2D" parent="Doors" unique_id=1189940595]
+position = Vector2(364, 111)
+
+[node name="Door_3" type="StaticBody2D" parent="Doors" unique_id=840901293]
+position = Vector2(366, 144)
+
+[node name="Door_4" type="StaticBody2D" parent="Doors" unique_id=1428716805]
+position = Vector2(368, 181)
+
+[node name="Node2D" type="Node2D" parent="." unique_id=373113658]
+position = Vector2(-1, 3)
+
+[node name="ZoneTrigger_Intro" type="Area2D" parent="Node2D" unique_id=1743043893]
+position = Vector2(132, 92)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Node2D/ZoneTrigger_Intro" unique_id=256560339]
+
+[node name="ZoneTrigger_Movement" type="Area2D" parent="Node2D" unique_id=514309203]
+position = Vector2(129, 132)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Node2D/ZoneTrigger_Movement" unique_id=1673285786]
+
+[node name="ZoneTrigger_Shooting" type="Area2D" parent="Node2D" unique_id=809396205]
+position = Vector2(134, 243)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Node2D/ZoneTrigger_Shooting" unique_id=803564821]
+
+[node name="ZoneTrigger_Dash" type="Area2D" parent="Node2D" unique_id=1327334850]
+position = Vector2(133, 167)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Node2D/ZoneTrigger_Dash" unique_id=1595798903]
+
+[node name="ZoneTrigger_Relic" type="Area2D" parent="Node2D" unique_id=1296932818]
+position = Vector2(137, 207)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Node2D/ZoneTrigger_Relic" unique_id=107207501]
+
+[node name="Enemies" type="Node2D" parent="." unique_id=306432257]
+position = Vector2(-32, -48)
+
+[node name="Enemy" parent="Enemies" unique_id=2056591160 instance=ExtResource("3_7bloo")]
+position = Vector2(597, 207)
+script = ExtResource("4_rlm2d")
+
+[node name="RelicPickup" type="Area2D" parent="." unique_id=734954667]
+position = Vector2(215, 87)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RelicPickup" unique_id=1751033482]
+
+[node name="ExitPortal" type="Area2D" parent="." unique_id=315194129]
+position = Vector2(292, 92)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitPortal" unique_id=2034320227]

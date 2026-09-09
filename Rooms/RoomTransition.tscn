@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://tiatgld8vq5o"]
+
+[ext_resource type="Script" uid="uid://dxpal4n3vliv6" path="res://Rooms/RoomTransition.gd" id="1_eshmj"]
+
+[node name="CanvasLayer" type="Node2D" unique_id=195713565]
+script = ExtResource("1_eshmj")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=574271358]
+offset_right = 1277.0
+offset_bottom = 716.0
+color = Color(0, 0, 0, 1)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=244851503]

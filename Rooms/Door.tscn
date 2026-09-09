@@ -1,0 +1,79 @@
+[gd_scene format=3 uid="uid://bff82rg0nj84m"]
+
+[ext_resource type="Script" uid="uid://bp4pb1ykgk5fh" path="res://Rooms/door.gd" id="1_1cj3k"]
+[ext_resource type="Texture2D" uid="uid://dd34p5umkr5fv" path="res://Assets/Paid/PortalSprites/Dimensional_Portal.png" id="2_wpbgl"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mdgx6"]
+atlas = ExtResource("2_wpbgl")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bseyl"]
+atlas = ExtResource("2_wpbgl")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mtwac"]
+atlas = ExtResource("2_wpbgl")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rf6x2"]
+atlas = ExtResource("2_wpbgl")
+region = Rect2(0, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_av48w"]
+atlas = ExtResource("2_wpbgl")
+region = Rect2(32, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_koq56"]
+atlas = ExtResource("2_wpbgl")
+region = Rect2(64, 32, 32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_eplmc"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mdgx6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bseyl")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mtwac")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rf6x2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_av48w")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_koq56")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 5.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_kmacj"]
+
+[node name="Door" type="Area2D" unique_id=42279943]
+collision_mask = 2
+script = ExtResource("1_1cj3k")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1685495243]
+z_index = 20
+position = Vector2(-0.9999954, -0.37499905)
+scale = Vector2(1.1250004, 0.8359375)
+sprite_frames = SubResource("SpriteFrames_eplmc")
+animation = &"idle"
+frame = 1
+frame_progress = 0.2933617
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=945850522]
+shape = SubResource("CircleShape2D_kmacj")
+
+[node name="PromptLabel" type="Label" parent="." unique_id=320640464]
+offset_left = -50.0
+offset_top = -34.0
+offset_right = 60.0
+offset_bottom = -11.0
+text = "\"E — Avanzar\""

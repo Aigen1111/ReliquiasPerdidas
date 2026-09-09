@@ -1,0 +1,133 @@
+[gd_scene format=3 uid="uid://bhbh0cdk06yyq"]
+
+[ext_resource type="Script" uid="uid://ke783twydrrl" path="res://Enemies/health_bar.gd" id="1_cx5c3"]
+[ext_resource type="Script" uid="uid://gd7bvcdjnkxg" path="res://Rooms/Bribri/enemy_boss_bribri.gd" id="1_x1uvo"]
+[ext_resource type="PackedScene" uid="uid://bsu7mgu10gwe3" path="res://Projectiles/Bullet.tscn" id="2_6ka2g"]
+[ext_resource type="PackedScene" uid="uid://d0tpvjwaxcfff" path="res://Enemies/EnemyLancero.tscn" id="3_8joog"]
+[ext_resource type="Texture2D" uid="uid://cacbrx56t467h" path="res://Assets/Paid/EnemySprites/Boss/BossBribri.png" id="4_6ka2g"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8joog"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(73, 901, 445, 465)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d3wu7"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(518, 901, 445, 465)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_n0746"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(963, 901, 445, 465)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ymyn3"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(1408, 901, 445, 465)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3woym"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(63, 1674, 447, 525)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_l11cy"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(510, 1674, 447, 525)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_we0fu"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(957, 1674, 447, 525)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2huy7"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(1404, 1674, 447, 525)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3vvl7"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(63, 177, 447, 525)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6g6wt"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(510, 177, 447, 525)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3nydx"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(957, 177, 447, 525)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_84eok"]
+atlas = ExtResource("4_6ka2g")
+region = Rect2(1404, 177, 447, 525)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_8gnq8"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8joog")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_d3wu7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_n0746")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ymyn3")
+}],
+"loop": 0,
+"name": &"attack",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3woym")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_l11cy")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_we0fu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2huy7")
+}],
+"loop": 0,
+"name": &"hurt_down",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3vvl7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6g6wt")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3nydx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_84eok")
+}],
+"loop": 1,
+"name": &"idle_down",
+"speed": 2.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_yf5fn"]
+size = Vector2(416.6667, 413.3333)
+
+[node name="EnemyBossBribri" type="CharacterBody2D" unique_id=1375713032 groups=["Enemy"]]
+scale = Vector2(0.3, 0.3)
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_x1uvo")
+bullet_scene = ExtResource("2_6ka2g")
+lancero_scene = ExtResource("3_8joog")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1538243529]
+sprite_frames = SubResource("SpriteFrames_8gnq8")
+animation = &"attack"
+frame = 3
+frame_progress = 1.0
+
+[node name="HealthBar" type="Node2D" parent="." unique_id=1967652083]
+script = ExtResource("1_cx5c3")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=401079431]
+position = Vector2(1.6666698, 26.666666)
+shape = SubResource("RectangleShape2D_yf5fn")

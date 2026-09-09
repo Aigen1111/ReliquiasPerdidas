@@ -1,7 +1,7 @@
 extends Camera2D
 
 @export var allow_mouse_wheel_zoom := true
-@export_range(0.25, 4.0, 0.05) var min_zoom := 0.75
+@export_range(0.25, 4.0, 0.05) var min_zoom := 1.5
 @export_range(0.25, 4.0, 0.05) var max_zoom := 2.5
 @export_range(0.01, 1.0, 0.01) var zoom_step := 0.10
 @export var smooth_follow := false
